@@ -9,6 +9,7 @@ __pycache__/
 _build
 build/
 dist/
+.venv
 
 *.pkl
 *.hd5
@@ -18,6 +19,7 @@ dist/
 .vim
 .nvimrc
 .vscode
+.ropeproject
 
 qlib/VERSION.txt
 qlib/data/_libs/expanding.cpp

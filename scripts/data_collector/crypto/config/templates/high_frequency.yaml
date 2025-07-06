@@ -1,0 +1,173 @@
+# High-frequency configuration for cryptocurrency data collection
+# Optimized for collecting minute-level and sub-minute data
+
+collection:
+  # Exchanges optimized for high-frequency data
+  exchanges:
+    - binance
+    - okx
+  
+  # High-frequency timeframes
+  timeframes:
+    - 1min
+    - 5min
+    - 15min
+    - 1h
+  
+  # Extended fields for high-frequency analysis
+  fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+    - volume_24h
+    - change_24h
+    - bid_ask_spread
+  
+  # Aggressive collection settings
+  max_workers: 8
+  rate_limit_delay: 0.05
+  retry_attempts: 5
+  retry_delay: 0.5
+  
+  # Shorter lookback for high-frequency
+  lookback_days: 30
+  
+  # Storage optimized for high-frequency
+  output_dir: "./hf_crypto_data"
+  file_format: "parquet"
+  compression: "lz4"  # Faster compression for high-frequency
+  
+  # Enable all features
+  enable_extended_fields: true
+  enable_risk_metrics: true
+  enable_validation: true
+  incremental_update: true
+
+logging:
+  level: "WARNING"  # Reduce logging overhead
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file_path: "./logs/hf_collector.log"
+  max_file_size: 52428800  # 50MB
+  backup_count: 10
+  console_output: false
+
+performance:
+  # Optimized for high-frequency processing
+  chunk_size: 5000
+  max_memory_usage: 0.9
+  
+  # Maximum parallelization
+  enable_multiprocessing: true
+  process_pool_size: null
+  
+  # Aggressive caching
+  enable_caching: true
+  cache_size_limit: 2000
+  cache_ttl: 1800  # 30 minutes
+  
+  # High-frequency database settings
+  batch_insert_size: 500
+  connection_pool_size: 10
+
+risk:
+  # High-frequency risk calculation
+  calculation_frequency: "5m"
+  cache_enabled: true
+  cache_size_limit: 2000
+  periods_per_year: 525600  # Minutes per year
+  
+  # High-frequency volatility
+  volatility_windows: [60, 288, 1440, 10080]  # 1h, 1d, 1w, 1m in minutes
+  volatility_annualize: true
+  
+  # High-frequency VaR
+  var_confidence_levels: [0.01, 0.05]
+  var_methods: ["historical", "parametric"]
+  var_windows: [288, 1440, 10080]  # 1d, 1w, 1m in minutes
+  var_monte_carlo_simulations: 5000
+  
+  # Frequent drawdown updates
+  drawdown_lookback_periods: 10080  # 1 week in minutes
+  
+  # High-frequency Sharpe
+  sharpe_risk_free_rate: 0.02
+  sharpe_windows: [1440, 10080, 43200]  # 1d, 1w, 1m in minutes
+
+universe:
+  name: "high_frequency"
+  description: "High-frequency trading universe"
+  
+  exchanges:
+    - binance
+    - okx
+  primary_exchange: "binance"
+  
+  market_types:
+    - spot
+    - futures
+  
+  # Strict filters for high-frequency trading
+  filters:
+    min_volume_24h: 10000000  # 10M minimum volume
+    min_volume_usd_24h: 1000000  # 1M USD minimum
+    base_assets: ["BTC", "ETH", "BNB", "ADA", "DOT", "LINK", "UNI", "AAVE"]
+    quote_assets: ["USDT", "BUSD", "BTC", "ETH"]
+    market_types:
+      - spot
+      - futures
+  
+  # Frequent updates
+  update_frequency: "hourly"
+  update_time: "00:00"
+  
+  # Limited universe for high-frequency
+  max_symbols: 50
+  min_symbols: 20
+  
+  ranking_criteria:
+    - volume_24h
+    - bid_ask_spread
+  ranking_order: "desc"
+  
+  # Frequent rebalancing
+  rebalance_frequency: "daily"
+  rebalance_threshold: 0.05
+
+validation:
+  # Strict validation for high-frequency data
+  enable_price_validation: true
+  enable_volume_validation: true
+  enable_timeseries_validation: true
+  enable_consistency_validation: true
+  enable_anomaly_detection: true
+  
+  required_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  # Strict completeness requirements
+  max_missing_ratio: 0.02  # 2% max missing
+  min_rows: 10
+  
+  # Tighter price validation for high-frequency
+  max_price_change_pct: 10.0  # 10% max change per minute
+  price_outlier_threshold: 2.0
+  
+  # Volume validation
+  volume_outlier_threshold: 3.0
+  volume_spike_threshold: 5.0
+  
+  # Strict time series validation
+  max_time_gap_minutes: 5  # 5 minute max gap
+  duplicate_timestamp_action: "keep_last"
+  
+  # Enhanced anomaly detection
+  anomaly_detection_method: "isolation_forest"
+  anomaly_contamination: 0.05
+  price_anomaly_window: 50
+  volume_anomaly_window: 50

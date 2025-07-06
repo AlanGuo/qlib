@@ -1,309 +1,305 @@
-import abc
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""
+Cryptocurrency data collector for Qlib.
+
+This module provides a unified interface for collecting cryptocurrency data
+that is compatible with Qlib's standard data collector framework.
+"""
+
 import sys
-import datetime
-from abc import ABC
-from pathlib import Path
-
 import fire
-import pandas as pd
-from loguru import logger
-from dateutil.tz import tzlocal
+from pathlib import Path
+from typing import List, Optional, Dict, Any
 
+# Setup path for imports - works from project root or crypto directory
 CUR_DIR = Path(__file__).resolve().parent
-sys.path.append(str(CUR_DIR.parent.parent))
-from data_collector.base import BaseCollector, BaseNormalize, BaseRun
-from data_collector.utils import deco_retry
+sys.path.insert(0, str(CUR_DIR))
+sys.path.insert(0, str(CUR_DIR.parent.parent))
 
-from pycoingecko import CoinGeckoAPI
-from time import mktime
-from datetime import datetime as dt
-import time
+# Import qlib base collector classes
+try:
+    from data_collector.base import BaseCollector as QlibBaseCollector, BaseNormalize, BaseRun
+except ImportError:
+    # Fallback for different qlib versions or when running from crypto directory
+    try:
+        from qlib.data.collector.base import BaseCollector as QlibBaseCollector, BaseNormalize, BaseRun
+    except ImportError:
+        QlibBaseCollector = object
+        BaseNormalize = object
+        BaseRun = object
+
+# Import the existing crypto collector functionality
+from config import CryptoDataConfig, ConfigFactory
+from storage_manager import CryptoStorageManager
 
 
-_CG_CRYPTO_SYMBOLS = None
+# Simple base class for our collector
+class BaseCollectorLocal:
+    """Simple base class for data collectors."""
+    def __init__(self):
+        try:
+            from qlib.utils import get_module_logger
+            self.logger = get_module_logger(self.__class__.__name__)
+        except ImportError:
+            import logging
+            self.logger = logging.getLogger(self.__class__.__name__)
 
 
-def get_cg_crypto_symbols(qlib_data_path: [str, Path] = None) -> list:
-    """get crypto symbols in coingecko
-
-    Returns
-    -------
-        crypto symbols in given exchanges list of coingecko
+class CryptoCollector(BaseCollectorLocal):
     """
-    global _CG_CRYPTO_SYMBOLS  # pylint: disable=W0603
-
-    @deco_retry
-    def _get_coingecko():
-        try:
-            cg = CoinGeckoAPI()
-            resp = pd.DataFrame(cg.get_coins_markets(vs_currency="usd"))
-        except Exception as e:
-            raise ValueError("request error") from e
-        try:
-            _symbols = resp["id"].to_list()
-        except Exception as e:
-            logger.warning(f"request error: {e}")
-            raise
-        return _symbols
-
-    if _CG_CRYPTO_SYMBOLS is None:
-        _all_symbols = _get_coingecko()
-
-        _CG_CRYPTO_SYMBOLS = sorted(set(_all_symbols))
-
-    return _CG_CRYPTO_SYMBOLS
-
-
-class CryptoCollector(BaseCollector):
-    def __init__(
-        self,
-        save_dir: [str, Path],
-        start=None,
-        end=None,
-        interval="1d",
-        max_workers=1,
-        max_collector_count=2,
-        delay=1,  # delay need to be one
-        check_data_length: int = None,
-        limit_nums: int = None,
-    ):
+    Main cryptocurrency data collector.
+    
+    Integrates with Qlib's data provider system and supports multiple exchanges.
+    """
+    
+    def __init__(self,
+                 config: CryptoDataConfig = None,
+                 storage_manager: Optional[CryptoStorageManager] = None):
         """
-
+        Initialize crypto collector.
+        
         Parameters
         ----------
-        save_dir: str
-            crypto save dir
-        max_workers: int
-            workers, default 4
-        max_collector_count: int
-            default 2
-        delay: float
-            time.sleep(delay), default 0
-        interval: str
-            freq, value from [1min, 1d], default 1min
-        start: str
-            start datetime, default None
-        end: str
-            end datetime, default None
-        check_data_length: int
-            check data length, if not None and greater than 0, each symbol will be considered complete if its data length is greater than or equal to this value, otherwise it will be fetched again, the maximum number of fetches being (max_collector_count). By default None.
-        limit_nums: int
-            using for debug, by default None
+        config : CryptoDataConfig, optional
+            Configuration object for data collection
+        storage_manager : CryptoStorageManager, optional
+            Storage manager for handling data persistence
         """
-        super(CryptoCollector, self).__init__(
-            save_dir=save_dir,
-            start=start,
-            end=end,
-            interval=interval,
-            max_workers=max_workers,
-            max_collector_count=max_collector_count,
-            delay=delay,
-            check_data_length=check_data_length,
-            limit_nums=limit_nums,
-        )
-
-        self.init_datetime()
-
-    def init_datetime(self):
-        if self.interval == self.INTERVAL_1min:
-            self.start_datetime = max(self.start_datetime, self.DEFAULT_START_DATETIME_1MIN)
-        elif self.interval == self.INTERVAL_1d:
-            pass
+        super().__init__()
+        self.config = config or CryptoDataConfig()
+        if storage_manager is None:
+            # Use config's data directory or default
+            data_dir = self.config.collection.qlib_data_dir or self.config.collection.output_dir or str(CUR_DIR / "data")
+            self.storage_manager = CryptoStorageManager(data_dir=data_dir)
         else:
-            raise ValueError(f"interval error: {self.interval}")
-
-        self.start_datetime = self.convert_datetime(self.start_datetime, self._timezone)
-        self.end_datetime = self.convert_datetime(self.end_datetime, self._timezone)
-
-    @staticmethod
-    def convert_datetime(dt: [pd.Timestamp, datetime.date, str], timezone):
-        try:
-            dt = pd.Timestamp(dt, tz=timezone).timestamp()
-            dt = pd.Timestamp(dt, tz=tzlocal(), unit="s")
-        except ValueError as e:
-            pass
-        return dt
-
-    @property
-    @abc.abstractmethod
-    def _timezone(self):
-        raise NotImplementedError("rewrite get_timezone")
-
-    @staticmethod
-    def get_data_from_remote(symbol, interval, start, end):
-        error_msg = f"{symbol}-{interval}-{start}-{end}"
-        try:
-            cg = CoinGeckoAPI()
-            data = cg.get_coin_market_chart_by_id(id=symbol, vs_currency="usd", days="max")
-            _resp = pd.DataFrame(columns=["date"] + list(data.keys()))
-            _resp["date"] = [dt.fromtimestamp(mktime(time.localtime(x[0] / 1000))) for x in data["prices"]]
-            for key in data.keys():
-                _resp[key] = [x[1] for x in data[key]]
-            _resp["date"] = pd.to_datetime(_resp["date"])
-            _resp["date"] = [x.date() for x in _resp["date"]]
-            _resp = _resp[(_resp["date"] < pd.to_datetime(end).date()) & (_resp["date"] > pd.to_datetime(start).date())]
-            if _resp.shape[0] != 0:
-                _resp = _resp.reset_index()
-            if isinstance(_resp, pd.DataFrame):
-                return _resp.reset_index()
-        except Exception as e:
-            logger.warning(f"{error_msg}:{e}")
-
-    def get_data(
-        self, symbol: str, interval: str, start_datetime: pd.Timestamp, end_datetime: pd.Timestamp
-    ) -> [pd.DataFrame]:
-        def _get_simple(start_, end_):
-            self.sleep()
-            _remote_interval = interval
-            return self.get_data_from_remote(
-                symbol,
-                interval=_remote_interval,
-                start=start_,
-                end=end_,
-            )
-
-        if interval == self.INTERVAL_1d:
-            _result = _get_simple(start_datetime, end_datetime)
-        else:
-            raise ValueError(f"cannot support {interval}")
-        return _result
-
-
-class CryptoCollector1d(CryptoCollector, ABC):
-    def get_instrument_list(self):
-        logger.info("get coingecko crypto symbols......")
-        symbols = get_cg_crypto_symbols()
-        logger.info(f"get {len(symbols)} symbols.")
-        return symbols
-
-    def normalize_symbol(self, symbol):
-        return symbol
-
-    @property
-    def _timezone(self):
-        return "Asia/Shanghai"
-
-
-class CryptoNormalize(BaseNormalize):
-    DAILY_FORMAT = "%Y-%m-%d"
-
-    @staticmethod
-    def normalize_crypto(
-        df: pd.DataFrame,
-        calendar_list: list = None,
-        date_field_name: str = "date",
-        symbol_field_name: str = "symbol",
-    ):
-        if df.empty:
-            return df
-        df = df.copy()
-        df.set_index(date_field_name, inplace=True)
-        df.index = pd.to_datetime(df.index)
-        df = df[~df.index.duplicated(keep="first")]
-        if calendar_list is not None:
-            df = df.reindex(
-                pd.DataFrame(index=calendar_list)
-                .loc[
-                    pd.Timestamp(df.index.min()).date() : pd.Timestamp(df.index.max()).date()
-                    + pd.Timedelta(hours=23, minutes=59)
-                ]
-                .index
-            )
-        df.sort_index(inplace=True)
-
-        df.index.names = [date_field_name]
-        return df.reset_index()
-
-    def normalize(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = self.normalize_crypto(df, self._calendar_list, self._date_field_name, self._symbol_field_name)
-        return df
-
-
-class CryptoNormalize1d(CryptoNormalize):
-    def _get_calendar_list(self):
-        return None
-
-
-class Run(BaseRun):
-    def __init__(self, source_dir=None, normalize_dir=None, max_workers=1, interval="1d"):
+            self.storage_manager = storage_manager
+        
+        # Field collector will be initialized when needed with proper adapter
+        self.field_collector = None
+    
+    def collect_data(self, symbols: List[str], start_date: str = None, end_date: str = None) -> Dict[str, Any]:
         """
-
+        Collect cryptocurrency data for specified symbols.
+        
         Parameters
         ----------
-        source_dir: str
-            The directory where the raw data collected from the Internet is saved, default "Path(__file__).parent/source"
-        normalize_dir: str
-            Directory for normalize data, default "Path(__file__).parent/normalize"
-        max_workers: int
-            Concurrent number, default is 1
-        interval: str
-            freq, value from [1min, 1d], default 1d
+        symbols : List[str]
+            List of cryptocurrency symbols to collect
+        start_date : str, optional
+            Start date for data collection
+        end_date : str, optional
+            End date for data collection
+            
+        Returns
+        -------
+        Dict[str, Any]
+            Collection results
         """
-        super().__init__(source_dir, normalize_dir, max_workers, interval)
+        # Initialize field collector with proper adapter when needed
+        try:
+            from crypto_field_collector import CryptoFieldCollector
+            from exchange_adapters.binance_adapter import BinanceAdapter
+            
+            # Create adapter based on config
+            adapter = BinanceAdapter()  # Default to Binance for now
+            self.field_collector = CryptoFieldCollector(adapter)
+            
+            return self.field_collector.collect_data(symbols, start_date, end_date)
+        except ImportError as e:
+            self.logger.error(f"Could not initialize field collector: {e}")
+            return {}
 
-    @property
-    def collector_class_name(self):
-        return f"CryptoCollector{self.interval}"
 
+class Run:
+    """Main runner class for crypto data collection, compatible with fire.Fire()"""
+    
+    def __init__(self, config_file: str = None, source_dir: str = None):
+        """
+        Initialize the crypto data collection runner.
+        
+        Parameters
+        ----------
+        config_file : str, optional
+            Path to configuration file
+        source_dir : str, optional
+            Directory to save raw data, default "Path(__file__).parent/source"
+        """
+        self.config_file = config_file
+        self.source_dir = source_dir or str(CUR_DIR / "source")
+        self.collector = None
+        
     @property
-    def normalize_class_name(self):
-        return f"CryptoNormalize{self.interval}"
-
-    @property
-    def default_base_dir(self) -> [Path, str]:
+    def default_base_dir(self) -> Path:
         return CUR_DIR
-
-    def download_data(
-        self,
-        max_collector_count=2,
-        delay=0,
-        start=None,
-        end=None,
-        check_data_length: int = None,
-        limit_nums=None,
-    ):
-        """download data from Internet
-
+    
+    def collect(self,
+                exchanges=None,
+                timeframes=None,
+                symbols=None,
+                start_date=None,
+                end_date=None,
+                config_file=None,
+                output_dir=None,
+                template=None):
+        """
+        Collect cryptocurrency data.
+        
         Parameters
         ----------
-        max_collector_count: int
-            default 2
-        delay: float
-            time.sleep(delay), default 0
-        interval: str
-            freq, value from [1min, 1d], default 1d, currently only supprot 1d
-        start: str
-            start datetime, default "2000-01-01"
-        end: str
-            end datetime, default ``pd.Timestamp(datetime.datetime.now() + pd.Timedelta(days=1))``
-        check_data_length: int # if this param useful?
-            check data length, if not None and greater than 0, each symbol will be considered complete if its data length is greater than or equal to this value, otherwise it will be fetched again, the maximum number of fetches being (max_collector_count). By default None.
-        limit_nums: int
-            using for debug, by default None
-
+        exchanges : str or List[str], optional
+            Exchange(s) to collect from (e.g., 'binance' or ['binance', 'okx'])
+        timeframes : str or List[str], optional
+            Timeframe(s) (e.g., 'day' or ['1h', 'day'])
+        symbols : str or List[str], optional
+            Symbol(s) (e.g., 'BTC/USDT' or ['BTC/USDT', 'ETH/USDT'])
+        start_date : str, optional
+            Start date in YYYY-MM-DD format
+        end_date : str, optional
+            End date in YYYY-MM-DD format
+        config_file : str, optional
+            Path to configuration file
+        output_dir : str, optional
+            Output directory for collected data
+        template : str, optional
+            Configuration template to use
+        
         Examples
-        ---------
-            # get daily data
-            $ python collector.py download_data --source_dir ~/.qlib/crypto_data/source/1d --start 2015-01-01 --end 2021-11-30 --delay 1 --interval 1d
+        --------
+        # Collect daily data from Binance
+        python collector.py collect --exchanges binance --timeframes day --symbols BTC/USDT
+        
+        # Collect using template
+        python collector.py collect --template production
         """
-
-        super(Run, self).download_data(max_collector_count, delay, start, end, check_data_length, limit_nums)
-
-    def normalize_data(self, date_field_name: str = "date", symbol_field_name: str = "symbol"):
-        """normalize data
-
+        try:
+            # Import CLI to avoid circular imports
+            from cli import CryptoCLI
+            
+            # Create CLI instance
+            cli = CryptoCLI()
+            
+            # Prepare arguments namespace
+            import argparse
+            args = argparse.Namespace()
+            
+            # Set arguments
+            args.exchanges = [exchanges] if isinstance(exchanges, str) else exchanges
+            args.timeframes = [timeframes] if isinstance(timeframes, str) else timeframes
+            args.symbols = [symbols] if isinstance(symbols, str) else symbols
+            args.start_date = start_date
+            args.end_date = end_date
+            args.config = config_file or self.config_file
+            args.output_dir = output_dir
+            args.template = template  # Don't force default template
+            args.fields = None
+            args.lookback_days = None
+            args.file_format = 'qlib'
+            args.max_workers = None
+            args.rate_limit = None
+            args.incremental = False
+            args.enable_validation = False
+            args.enable_risk_metrics = False
+            args.dry_run = False
+            args.verbose = False
+            
+            # Call the CLI handler directly
+            cli.handle_collect(args)
+            print("✅ Data collection completed successfully!")
+            
+        except Exception as e:
+            print(f"❌ Error during collection: {e}")
+            raise
+    
+    def validate(self, data_dir: str = None, config_file: str = None):
+        """
+        Validate collected data.
+        
         Parameters
         ----------
-        date_field_name: str
-            date field name, default date
-        symbol_field_name: str
-            symbol field name, default symbol
-
+        data_dir : str, optional
+            Directory containing data to validate
+        config_file : str, optional
+            Path to configuration file
+        
         Examples
-        ---------
-            $ python collector.py normalize_data --source_dir ~/.qlib/crypto_data/source/1d --normalize_dir ~/.qlib/crypto_data/source/1d_nor --interval 1d --date_field_name date
+        --------
+        python collector.py validate --data_dir ./data
         """
-        super(Run, self).normalize_data(date_field_name, symbol_field_name)
+        from cli import CryptoCLI
+        
+        args = []
+        if data_dir:
+            args.extend(['--data-dir', data_dir])
+        if config_file or self.config_file:
+            args.extend(['--config-file', config_file or self.config_file])
+        
+        cli = CryptoCLI()
+        parsed_args = cli.parser.parse_args(['validate'] + args)
+        cli.handle_validate(parsed_args)
+    
+    def incremental_update(self, action: str = 'update', config_file: str = None):
+        """
+        Handle incremental data updates.
+        
+        Parameters
+        ----------
+        action : str
+            Action to perform: 'update', 'status', or 'reset'
+        config_file : str, optional
+            Path to configuration file
+        
+        Examples
+        --------
+        python collector.py incremental_update --action update
+        python collector.py incremental_update --action status
+        """
+        from cli import CryptoCLI
+        
+        args = [action]
+        if config_file or self.config_file:
+            args.extend(['--config-file', config_file or self.config_file])
+        
+        cli = CryptoCLI()
+        parsed_args = cli.parser.parse_args(['incremental'] + args)
+        cli.handle_incremental(parsed_args)
+    
+    def templates(self, action: str = 'list', template_name: str = None):
+        """
+        Manage configuration templates.
+        
+        Parameters
+        ----------
+        action : str
+            Action to perform: 'list', 'info', or 'compare'
+        template_name : str, optional
+            Name of template (for info action)
+        
+        Examples
+        --------
+        python collector.py templates --action list
+        python collector.py templates --action info --template_name simple
+        """
+        try:
+            from cli import CryptoCLI
+            import argparse
+            
+            # Create CLI instance
+            cli = CryptoCLI()
+            
+            # Prepare arguments namespace
+            args = argparse.Namespace()
+            args.template_action = action
+            args.template_name = template_name
+            args.config = None
+            
+            # Call the CLI handler directly
+            cli.handle_templates(args)
+            
+        except Exception as e:
+            print(f"❌ Error managing templates: {e}")
+            raise
 
 
 if __name__ == "__main__":

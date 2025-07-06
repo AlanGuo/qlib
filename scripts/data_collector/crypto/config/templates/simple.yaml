@@ -1,0 +1,185 @@
+# Simple configuration for cryptocurrency data collection
+# Minimal setup for basic data collection
+
+collection:
+  # Single exchange for simplicity
+  exchanges:
+    - binance
+  
+  # Basic symbols (empty for auto-discovery)
+  symbols: []
+  
+  # Single timeframe
+  timeframes:
+    - day
+  
+  # Core OHLCV fields only
+  fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  # Simple collection settings
+  max_workers: 2
+  rate_limit_delay: 0.5
+  retry_attempts: 2
+  retry_delay: 2.0
+  
+  # Short lookback for quick setup
+  lookback_days: 90
+  
+  # Simple storage
+  output_dir: "./simple_crypto_data"
+  file_format: "csv"
+  compression: null
+  
+  # Minimal features
+  enable_extended_fields: false
+  enable_risk_metrics: false
+  enable_validation: true
+  incremental_update: false
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file_path: null
+  max_file_size: 10485760  # 10MB
+  backup_count: 3
+  console_output: true
+
+performance:
+  # Simple performance settings
+  chunk_size: 5000
+  max_memory_usage: 0.5
+  
+  # No multiprocessing for simplicity
+  enable_multiprocessing: false
+  process_pool_size: 1
+  
+  # No caching for simplicity
+  enable_caching: false
+  cache_size_limit: 100
+  cache_ttl: 1800
+  
+  # Simple database settings
+  batch_insert_size: 500
+  connection_pool_size: 2
+
+risk:
+  # Minimal risk configuration
+  calculation_frequency: "1d"
+  cache_enabled: false
+  cache_size_limit: 100
+  periods_per_year: 365
+  
+  # Basic volatility
+  volatility_windows: [30]
+  volatility_annualize: true
+  
+  # Basic VaR
+  var_confidence_levels: [0.05]
+  var_methods: ["historical"]
+  var_windows: [30]
+  var_monte_carlo_simulations: 1000
+  
+  # Basic drawdown
+  drawdown_lookback_periods: 100
+  drawdown_recovery_tracking: false
+  
+  # Basic Sharpe
+  sharpe_risk_free_rate: 0.02
+  sharpe_windows: [30]
+
+universe:
+  name: "simple"
+  description: "Simple cryptocurrency universe"
+  
+  exchanges:
+    - binance
+  primary_exchange: "binance"
+  
+  market_types:
+    - spot
+  
+  # Simple filters
+  filters:
+    min_volume_24h: 1000000  # 1M minimum volume
+    quote_assets: 
+      - USDT
+    market_types:
+      - spot
+  
+  # Daily updates
+  update_frequency: "daily"
+  update_time: "00:00"
+  
+  # Small universe
+  max_symbols: 20
+  min_symbols: 10
+  
+  ranking_criteria:
+    - volume_24h
+  ranking_order: "desc"
+  
+  # Simple rebalancing
+  rebalance_frequency: "monthly"
+  rebalance_threshold: 0.2
+  
+  # Basic data collection
+  collect_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  # Short-term storage
+  save_history: true
+  history_retention_days: 180
+
+validation:
+  # Basic validation
+  enable_price_validation: true
+  enable_volume_validation: true
+  enable_timeseries_validation: false
+  enable_consistency_validation: false
+  enable_anomaly_detection: false
+  
+  required_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  optional_fields: []
+  
+  # Relaxed completeness
+  max_missing_ratio: 0.2  # 20% max missing
+  min_rows: 10
+  
+  # Basic price validation
+  max_price_change_pct: 50.0
+  price_outlier_threshold: 5.0
+  min_price: 0.0
+  
+  # Basic volume validation
+  volume_outlier_threshold: 10.0
+  min_volume: 0.0
+  volume_spike_threshold: 20.0
+  
+  # Basic time series validation
+  max_time_gap_minutes: 2880  # 48 hours
+  duplicate_timestamp_action: "keep_last"
+  
+  # No consistency checks
+  ohlc_consistency_check: false
+  volume_price_consistency_check: false
+  
+  # No anomaly detection
+  anomaly_detection_method: "none"
+  anomaly_contamination: 0.1
+  price_anomaly_window: 50
+  volume_anomaly_window: 50

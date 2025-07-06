@@ -1,0 +1,165 @@
+# 4.1 阶段实盘测试配置
+# 小规模实盘测试：收集主流币种1天的数据
+
+collection:
+  # 测试交易所
+  exchanges:
+    - binance
+    - okx
+  
+  # 测试时间框架
+  timeframes:
+    - 1h
+    - day
+  
+  # 核心字段
+  fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+    - volume_24h
+    - change_24h
+  
+  # 保守的收集设置
+  max_workers: 2
+  rate_limit_delay: 0.5
+  retry_attempts: 3
+  retry_delay: 1.0
+  
+  # 1天数据收集
+  lookback_days: 1
+  
+  # 测试存储设置
+  output_dir: "./test_4_1_data"
+  file_format: "parquet"
+  compression: "snappy"
+  
+  # 测试功能
+  enable_extended_fields: false
+  enable_risk_metrics: false
+  enable_validation: true
+  incremental_update: false
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
+  file_path: "./test_4_1_data/crypto_collector_4_1.log"
+  max_file_size: 10485760  # 10MB
+  backup_count: 3
+  console_output: true
+
+performance:
+  # 保守性能设置
+  chunk_size: 1000
+  max_memory_usage: 0.4
+  
+  # 单进程测试
+  enable_multiprocessing: false
+  process_pool_size: 1
+  
+  # 基础缓存
+  enable_caching: true
+  cache_size_limit: 100
+  cache_ttl: 1800
+  
+  # 小批量插入
+  batch_insert_size: 100
+  connection_pool_size: 2
+
+universe:
+  name: "live_test_4_1"
+  description: "4.1阶段实盘测试币种"
+
+  exchanges:
+    - binance
+    - okx
+  primary_exchange: "binance"
+
+  market_types:
+    - spot
+    - perpetual
+
+  # 主流币种过滤器
+  filters:
+    min_volume_24h: 10000000  # 10M minimum volume
+    min_volume_usd_24h: 1000000  # 1M USD minimum
+    base_assets:
+      - BTC
+      - ETH
+      - BNB
+      - ADA
+      - SOL
+    quote_assets:
+      - USDT
+
+  # 测试更新设置
+  update_frequency: "manual"
+  max_symbols: 5
+  min_symbols: 5
+  
+  # 测试数据收集
+  collect_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+    - volume_24h
+    - change_24h
+  
+  # 短期存储
+  save_history: true
+  history_retention_days: 7
+
+validation:
+  # 基础验证
+  enable_price_validation: true
+  enable_volume_validation: true
+  enable_timeseries_validation: true
+  enable_consistency_validation: true
+  enable_anomaly_detection: false
+  
+  required_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  optional_fields:
+    - volume_24h
+    - change_24h
+  
+  # 宽松的完整性要求
+  max_missing_ratio: 0.1  # 10% max missing
+  min_rows: 10
+  
+  # 宽松的价格验证
+  max_price_change_pct: 50.0  # 50% max change
+  price_outlier_threshold: 4.0
+  min_price: 0.0
+  
+  # 体积验证
+  volume_outlier_threshold: 5.0
+  min_volume: 0.0
+  volume_spike_threshold: 10.0
+  
+  # 时间序列验证
+  max_time_gap_minutes: 240  # 4 hours max gap
+  duplicate_timestamp_action: "keep_last"
+  
+  # OHLC一致性
+  ohlc_consistency_check: true
+  volume_price_consistency_check: true
+
+# 测试特定设置
+test:
+  mode: "live_test_4_1"
+  target_symbols: 5
+  target_timeframes: 2
+  target_exchanges: 2
+  expected_data_points: 48  # 1天 * 2个时间框架 * 24小时
+  quality_threshold: 0.95
+  completion_timeout: 3600  # 1小时超时

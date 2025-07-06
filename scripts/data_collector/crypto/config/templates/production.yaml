@@ -1,0 +1,213 @@
+# Production configuration for cryptocurrency data collection
+# Optimized for stability, reliability, and monitoring
+
+collection:
+  # Reliable exchanges for production
+  exchanges:
+    - binance
+    - okx
+  
+  # Standard timeframes for production
+  timeframes:
+    - 1h
+    - day
+  
+  # Core fields for production
+  fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+    - volume_24h
+    - change_24h
+  
+  # Conservative collection settings
+  max_workers: 4
+  rate_limit_delay: 0.2
+  retry_attempts: 5
+  retry_delay: 2.0
+  
+  # Extended lookback for production
+  lookback_days: 730  # 2 years
+  
+  # Production storage settings
+  output_dir: "/data/crypto"
+  file_format: "parquet"
+  compression: "snappy"
+  
+  # Production features
+  enable_extended_fields: false
+  enable_risk_metrics: true
+  enable_validation: true
+  incremental_update: true
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
+  file_path: "/var/log/crypto_collector.log"
+  max_file_size: 52428800  # 50MB
+  backup_count: 20
+  console_output: false
+
+performance:
+  # Conservative performance settings
+  chunk_size: 10000
+  max_memory_usage: 0.6
+  
+  # Controlled parallelization
+  enable_multiprocessing: true
+  process_pool_size: 4
+  
+  # Production caching
+  enable_caching: true
+  cache_size_limit: 1000
+  cache_ttl: 3600
+  
+  # Production database settings
+  batch_insert_size: 1000
+  connection_pool_size: 5
+
+risk:
+  # Production risk calculation
+  calculation_frequency: "1h"
+  cache_enabled: true
+  cache_size_limit: 1000
+  periods_per_year: 365
+  
+  # Standard volatility windows
+  volatility_windows: [7, 30, 90, 252]
+  volatility_annualize: true
+  
+  # Conservative VaR settings
+  var_confidence_levels: [0.05, 0.10]
+  var_methods: ["historical", "parametric"]
+  var_windows: [30, 90, 252]
+  var_monte_carlo_simulations: 10000
+  
+  # Standard drawdown settings
+  drawdown_lookback_periods: 1000
+  drawdown_recovery_tracking: true
+  
+  # Production Sharpe settings
+  sharpe_risk_free_rate: 0.02
+  sharpe_windows: [30, 90, 252]
+
+universe:
+  name: "production"
+  description: "Production cryptocurrency universe"
+  
+  exchanges:
+    - binance
+    - okx
+  primary_exchange: "binance"
+  
+  market_types:
+    - spot
+  
+  # Production-grade filters
+  filters:
+    min_volume_24h: 5000000  # 5M minimum volume
+    min_volume_usd_24h: 500000  # 500K USD minimum
+    min_market_cap: 100000000  # 100M minimum market cap
+    base_assets: 
+      - BTC
+      - ETH
+      - BNB
+      - ADA
+      - DOT
+      - LINK
+      - UNI
+      - AAVE
+      - SOL
+      - AVAX
+      - MATIC
+      - ATOM
+    quote_assets: 
+      - USDT
+      - BUSD
+      - USDC
+    exclude_base_assets:
+      - LUNA
+      - UST
+    market_types:
+      - spot
+  
+  # Daily updates for production
+  update_frequency: "daily"
+  update_time: "02:00"  # 2 AM UTC
+  
+  # Controlled universe size
+  max_symbols: 100
+  min_symbols: 50
+  
+  ranking_criteria:
+    - market_cap
+    - volume_24h
+  ranking_order: "desc"
+  
+  # Weekly rebalancing
+  rebalance_frequency: "weekly"
+  rebalance_threshold: 0.1
+  
+  # Production data collection
+  collect_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+    - volume_24h
+    - change_24h
+  
+  # Long-term storage
+  save_history: true
+  history_retention_days: 1095  # 3 years
+
+validation:
+  # Comprehensive validation for production
+  enable_price_validation: true
+  enable_volume_validation: true
+  enable_timeseries_validation: true
+  enable_consistency_validation: true
+  enable_anomaly_detection: true
+  
+  required_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  optional_fields:
+    - volume_24h
+    - change_24h
+    - market_cap
+  
+  # Production completeness requirements
+  max_missing_ratio: 0.05  # 5% max missing
+  min_rows: 100
+  
+  # Conservative price validation
+  max_price_change_pct: 25.0  # 25% max change
+  price_outlier_threshold: 3.0
+  min_price: 0.0
+  
+  # Volume validation
+  volume_outlier_threshold: 4.0
+  min_volume: 0.0
+  volume_spike_threshold: 8.0
+  
+  # Time series validation
+  max_time_gap_minutes: 120  # 2 hours max gap
+  duplicate_timestamp_action: "keep_last"
+  
+  # OHLC consistency
+  ohlc_consistency_check: true
+  volume_price_consistency_check: true
+  
+  # Production anomaly detection
+  anomaly_detection_method: "isolation_forest"
+  anomaly_contamination: 0.1
+  price_anomaly_window: 100
+  volume_anomaly_window: 100
