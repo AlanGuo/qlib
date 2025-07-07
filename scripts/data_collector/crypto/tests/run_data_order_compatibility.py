@@ -14,8 +14,9 @@ from pathlib import Path
 import pandas as pd
 
 # Add the crypto collector directory to path
-SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR))
+_current_dir = Path(__file__).parent
+if str(_current_dir.parent) not in sys.path:
+    sys.path.insert(0, str(_current_dir.parent))
 
 from exchange_adapters.binance_adapter import BinanceAdapter
 from storage_manager import CryptoStorageManager

@@ -36,9 +36,9 @@ from typing import Dict, List, Any
 from dataclasses import dataclass, asdict
 from logging.handlers import RotatingFileHandler
 
-# Add the crypto collector directory to path
-SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR))
+_current_dir = Path(__file__).parent
+if str(_current_dir.parent) not in sys.path:
+    sys.path.insert(0, str(_current_dir.parent))
 
 # Import crypto collector modules
 try:
