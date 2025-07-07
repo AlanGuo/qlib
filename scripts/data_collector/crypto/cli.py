@@ -918,8 +918,7 @@ Examples:
             'research': ConfigFactory.create_research_config,
             'high_frequency': ConfigFactory.create_high_frequency_config,
             'simple': ConfigFactory.create_daily_config,
-            'multi_exchange': ConfigFactory.create_multi_exchange_config,
-            'live_test_4_1': self._load_live_test_4_1_config,
+            'multi_exchange': ConfigFactory.create_multi_exchange_config
         }
         
         factory_method = factory_methods.get(template_name)
@@ -927,20 +926,7 @@ Examples:
             raise ValueError(f"Unknown template: {template_name}")
         
         return factory_method()
-    
-    def _load_live_test_4_1_config(self) -> CryptoDataConfig:
-        """Load the live_test_4_1 configuration template."""
-        try:
-            from config.templates.live_test_4_1 import load_template
-            return load_template()
-        except ImportError:
-            # Fallback to loading from YAML file
-            config_path = Path(__file__).parent / 'config' / 'templates' / 'live_test_4_1.yaml'
-            if config_path.exists():
-                return CryptoDataConfig.from_file(str(config_path))
-            else:
-                raise ValueError("live_test_4_1 template not found")
-    
+
     def _override_config_from_args(self, config: CryptoDataConfig, args):
         """Override configuration with command line arguments."""
         if args.exchanges:
