@@ -146,7 +146,7 @@
 ## 测试环境准备
 
 ### 测试文件路径
-project_dir/qlib/scripts/data_collector/crypto/tests/
+[project_dir]/test_data/
 
 ### 真实API代理环境
 export http_proxy=http://127.0.0.1:10808
