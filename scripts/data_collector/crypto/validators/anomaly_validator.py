@@ -139,18 +139,18 @@ class AnomalyValidator(BaseValidator):
                 
                 if len(prices) >= self.min_data_points:
                     # Z-score method
-                    z_scores = np.abs(stats.zscore(prices))
+                    z_scores = pd.Series(np.abs(stats.zscore(prices)), index=prices.index)
                     outliers = prices[z_scores > self.z_score_threshold]
                     
                     for idx in outliers.index:
                         issues.append(self._create_issue(
                             ValidationSeverity.WARNING,
                             f"Price anomaly detected in {col} at index {idx}: "
-                            f"{data.loc[idx, col]} (Z-score: {z_scores[idx]:.2f})",
-                            field=col,
+                            f"{data.loc[idx, col]} (Z-score: {z_scores.loc[idx]:.2f})",
+                            field_name=col,
                             row_index=idx,
                             value=data.loc[idx, col],
-                            z_score=z_scores[idx],
+                            z_score=z_scores.loc[idx],
                             anomaly_type='statistical_outlier'
                         ))
         
@@ -172,18 +172,18 @@ class AnomalyValidator(BaseValidator):
                 if len(non_zero_volumes) >= self.min_data_points:
                     # Use log transformation for volume data
                     log_volumes = np.log(non_zero_volumes)
-                    z_scores = np.abs(stats.zscore(log_volumes))
+                    z_scores = pd.Series(np.abs(stats.zscore(log_volumes)), index=non_zero_volumes.index)
                     outliers = non_zero_volumes[z_scores > self.z_score_threshold]
                     
                     for idx in outliers.index:
                         issues.append(self._create_issue(
                             ValidationSeverity.WARNING,
                             f"Volume anomaly detected in {col} at index {idx}: "
-                            f"{data.loc[idx, col]} (Log Z-score: {z_scores[idx]:.2f})",
-                            field=col,
+                            f"{data.loc[idx, col]} (Log Z-score: {z_scores.loc[idx]:.2f})",
+                            field_name=col,
                             row_index=idx,
                             value=data.loc[idx, col],
-                            log_z_score=z_scores[idx],
+                            log_z_score=z_scores.loc[idx],
                             anomaly_type='volume_outlier'
                         ))
         
@@ -206,7 +206,7 @@ class AnomalyValidator(BaseValidator):
                         f"Price spike detected at index {idx}: "
                         f"{spikes.loc[idx]:.2%} change "
                         f"(from {data.loc[prev_idx, 'close']} to {data.loc[idx, 'close']})",
-                        field='close',
+                        field_name='close',
                         row_index=idx,
                         price_change=spikes.loc[idx],
                         prev_price=data.loc[prev_idx, 'close'],
@@ -238,7 +238,7 @@ class AnomalyValidator(BaseValidator):
                             ValidationSeverity.WARNING,
                             f"Volume spike detected at index {idx}: "
                             f"{volumes.loc[idx]} ({spikes.loc[idx]:.1f}x normal volume)",
-                            field='volume',
+                            field_name='volume',
                             row_index=idx,
                             volume=volumes.loc[idx],
                             normal_volume=rolling_median.loc[idx],
@@ -276,7 +276,7 @@ class AnomalyValidator(BaseValidator):
                         ValidationSeverity.INFO,
                         f"Statistical outlier in {col} at index {idx}: "
                         f"{values.loc[idx]} (outside {bound_type} bound {bound_value:.4f})",
-                        field=col,
+                        field_name=col,
                         row_index=idx,
                         value=values.loc[idx],
                         bound_type=bound_type,

@@ -1,0 +1,240 @@
+2025-07-07 11:27:06,255 - config.main_config - INFO - setup_logging:578 - File logging configured: test_4_1_data/crypto_collector_4_1.log
+2025-07-07 11:27:06,255 - config.main_config - INFO - setup_logging:580 - Logging configured with level: INFO
+2025-07-07 11:27:06,255 - config.main_config - INFO - validate:365 - Configuration validation passed
+2025-07-07 11:27:45,064 - config.main_config - INFO - setup_logging:578 - File logging configured: test_4_1_data/crypto_collector_4_1.log
+2025-07-07 11:27:45,064 - config.main_config - INFO - setup_logging:580 - Logging configured with level: INFO
+2025-07-07 11:27:45,064 - config.main_config - INFO - validate:365 - Configuration validation passed
+2025-07-07 11:34:18,739 - config.main_config - INFO - setup_logging:578 - File logging configured: test_4_1_data/crypto_collector_4_1.log
+2025-07-07 11:34:18,739 - config.main_config - INFO - setup_logging:580 - Logging configured with level: INFO
+2025-07-07 11:34:18,739 - __main__ - INFO - handle_collect:451 - Validating configuration...
+2025-07-07 11:34:18,739 - config.main_config - INFO - validate:365 - Configuration validation passed
+2025-07-07 11:34:18,739 - __main__ - INFO - handle_collect:453 - Configuration validation completed successfully
+2025-07-07 11:34:18,739 - __main__ - INFO - handle_collect:456 - Initializing data collector...
+2025-07-07 11:34:18,935 - __main__ - INFO - handle_collect:460 - Starting data collection...
+2025-07-07 11:34:18,935 - __main__ - INFO - _execute_data_collection:719 - Initializing storage manager...
+2025-07-07 11:34:18,936 - __main__ - INFO - _execute_data_collection:725 - Using configured symbols from universe...
+2025-07-07 11:34:18,936 - __main__ - INFO - _execute_data_collection:733 - Generated 5 symbols: ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'ADA/USDT', 'SOL/USDT']
+2025-07-07 11:34:18,936 - __main__ - INFO - _execute_data_collection:745 - Collecting data from 2025-07-06 to 2025-07-07
+2025-07-07 11:34:18,936 - __main__ - INFO - _execute_data_collection:750 - Processing exchange: binance (spot)
+2025-07-07 11:34:20,439 - __main__ - INFO - _execute_data_collection:766 - Collecting BTC/USDT from binance (spot)...
+2025-07-07 11:34:20,439 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:20,586 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_spot_btcusdt (1h, spot)
+2025-07-07 11:34:20,587 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:20,722 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_spot_btcusdt (1d, spot)
+2025-07-07 11:34:20,722 - __main__ - INFO - _execute_data_collection:766 - Collecting ETH/USDT from binance (spot)...
+2025-07-07 11:34:20,722 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:20,866 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_spot_ethusdt (1h, spot)
+2025-07-07 11:34:20,867 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:21,013 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_spot_ethusdt (1d, spot)
+2025-07-07 11:34:21,013 - __main__ - INFO - _execute_data_collection:766 - Collecting BNB/USDT from binance (spot)...
+2025-07-07 11:34:21,013 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:21,160 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_spot_bnbusdt (1h, spot)
+2025-07-07 11:34:21,160 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:21,300 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_spot_bnbusdt (1d, spot)
+2025-07-07 11:34:21,300 - __main__ - INFO - _execute_data_collection:766 - Collecting ADA/USDT from binance (spot)...
+2025-07-07 11:34:21,300 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:21,439 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_spot_adausdt (1h, spot)
+2025-07-07 11:34:21,439 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:21,581 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_spot_adausdt (1d, spot)
+2025-07-07 11:34:21,581 - __main__ - INFO - _execute_data_collection:766 - Collecting SOL/USDT from binance (spot)...
+2025-07-07 11:34:21,581 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:21,718 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_spot_solusdt (1h, spot)
+2025-07-07 11:34:21,718 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:21,861 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_spot_solusdt (1d, spot)
+2025-07-07 11:34:21,861 - __main__ - INFO - _execute_data_collection:750 - Processing exchange: binance (perpetual)
+2025-07-07 11:34:23,306 - __main__ - INFO - _execute_data_collection:766 - Collecting BTC/USDT from binance (perpetual)...
+2025-07-07 11:34:23,306 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:23,440 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_perpetual_btcusdt (1h, perpetual)
+2025-07-07 11:34:23,440 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:23,706 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_perpetual_btcusdt (1d, perpetual)
+2025-07-07 11:34:23,706 - __main__ - INFO - _execute_data_collection:766 - Collecting ETH/USDT from binance (perpetual)...
+2025-07-07 11:34:23,706 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:23,963 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_perpetual_ethusdt (1h, perpetual)
+2025-07-07 11:34:23,963 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:24,216 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_perpetual_ethusdt (1d, perpetual)
+2025-07-07 11:34:24,216 - __main__ - INFO - _execute_data_collection:766 - Collecting BNB/USDT from binance (perpetual)...
+2025-07-07 11:34:24,216 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:24,470 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_perpetual_bnbusdt (1h, perpetual)
+2025-07-07 11:34:24,470 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:24,729 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_perpetual_bnbusdt (1d, perpetual)
+2025-07-07 11:34:24,730 - __main__ - INFO - _execute_data_collection:766 - Collecting ADA/USDT from binance (perpetual)...
+2025-07-07 11:34:24,730 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:24,970 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_perpetual_adausdt (1h, perpetual)
+2025-07-07 11:34:24,971 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:25,227 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_perpetual_adausdt (1d, perpetual)
+2025-07-07 11:34:25,227 - __main__ - INFO - _execute_data_collection:766 - Collecting SOL/USDT from binance (perpetual)...
+2025-07-07 11:34:25,227 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:25,490 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for binance_perpetual_solusdt (1h, perpetual)
+2025-07-07 11:34:25,490 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:25,746 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for binance_perpetual_solusdt (1d, perpetual)
+2025-07-07 11:34:25,746 - __main__ - INFO - _execute_data_collection:750 - Processing exchange: okx (spot)
+2025-07-07 11:34:26,711 - __main__ - INFO - _execute_data_collection:766 - Collecting BTC/USDT from okx (spot)...
+2025-07-07 11:34:26,711 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:26,944 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_spot_btcusdt (1h, spot)
+2025-07-07 11:34:26,944 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:27,062 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_spot_btcusdt (1d, spot)
+2025-07-07 11:34:27,062 - __main__ - INFO - _execute_data_collection:766 - Collecting ETH/USDT from okx (spot)...
+2025-07-07 11:34:27,062 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:27,185 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_spot_ethusdt (1h, spot)
+2025-07-07 11:34:27,185 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:27,329 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_spot_ethusdt (1d, spot)
+2025-07-07 11:34:27,330 - __main__ - INFO - _execute_data_collection:766 - Collecting BNB/USDT from okx (spot)...
+2025-07-07 11:34:27,330 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:27,521 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_spot_bnbusdt (1h, spot)
+2025-07-07 11:34:27,521 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:27,651 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_spot_bnbusdt (1d, spot)
+2025-07-07 11:34:27,651 - __main__ - INFO - _execute_data_collection:766 - Collecting ADA/USDT from okx (spot)...
+2025-07-07 11:34:27,652 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:27,773 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_spot_adausdt (1h, spot)
+2025-07-07 11:34:27,773 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:27,901 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_spot_adausdt (1d, spot)
+2025-07-07 11:34:27,901 - __main__ - INFO - _execute_data_collection:766 - Collecting SOL/USDT from okx (spot)...
+2025-07-07 11:34:27,902 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:28,032 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_spot_solusdt (1h, spot)
+2025-07-07 11:34:28,032 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:28,154 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_spot_solusdt (1d, spot)
+2025-07-07 11:34:28,154 - __main__ - INFO - _execute_data_collection:750 - Processing exchange: okx (perpetual)
+2025-07-07 11:34:29,072 - __main__ - INFO - _execute_data_collection:766 - Collecting BTC/USDT from okx (perpetual)...
+2025-07-07 11:34:29,072 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:29,186 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_perpetual_btcusdt (1h, perpetual)
+2025-07-07 11:34:29,186 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:29,293 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_perpetual_btcusdt (1d, perpetual)
+2025-07-07 11:34:29,293 - __main__ - INFO - _execute_data_collection:766 - Collecting ETH/USDT from okx (perpetual)...
+2025-07-07 11:34:29,293 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:29,412 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_perpetual_ethusdt (1h, perpetual)
+2025-07-07 11:34:29,412 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:29,536 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_perpetual_ethusdt (1d, perpetual)
+2025-07-07 11:34:29,536 - __main__ - INFO - _execute_data_collection:766 - Collecting BNB/USDT from okx (perpetual)...
+2025-07-07 11:34:29,536 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:29,662 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_perpetual_bnbusdt (1h, perpetual)
+2025-07-07 11:34:29,662 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:29,778 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_perpetual_bnbusdt (1d, perpetual)
+2025-07-07 11:34:29,778 - __main__ - INFO - _execute_data_collection:766 - Collecting ADA/USDT from okx (perpetual)...
+2025-07-07 11:34:29,778 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:29,895 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_perpetual_adausdt (1h, perpetual)
+2025-07-07 11:34:29,895 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:30,006 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_perpetual_adausdt (1d, perpetual)
+2025-07-07 11:34:30,006 - __main__ - INFO - _execute_data_collection:766 - Collecting SOL/USDT from okx (perpetual)...
+2025-07-07 11:34:30,006 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1h
+2025-07-07 11:34:30,309 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 28 records for okx_perpetual_solusdt (1h, perpetual)
+2025-07-07 11:34:30,309 - __main__ - INFO - _execute_data_collection:771 -   Timeframe: 1d
+2025-07-07 11:34:30,418 - __main__ - INFO - _execute_data_collection:803 -     ✅ Stored 2 records for okx_perpetual_solusdt (1d, perpetual)
+2025-07-07 11:34:30,418 - __main__ - INFO - _execute_data_collection:815 - ✅ Data collection completed!
+2025-07-07 11:34:30,425 - __main__ - INFO - handle_collect:466 - Collection completed successfully!
+2025-07-07 12:00:55,777 - config.main_config - INFO - setup_logging:578 - File logging configured: test_4_1_data/crypto_collector_4_1.log
+2025-07-07 12:00:55,777 - config.main_config - INFO - setup_logging:580 - Logging configured with level: INFO
+2025-07-07 12:00:55,777 - __main__ - INFO - handle_collect:451 - Validating configuration...
+2025-07-07 12:00:55,777 - config.main_config - INFO - validate:365 - Configuration validation passed
+2025-07-07 12:00:55,777 - __main__ - INFO - handle_collect:453 - Configuration validation completed successfully
+2025-07-07 12:00:55,777 - __main__ - INFO - handle_collect:456 - Initializing data collector...
+2025-07-07 12:00:55,981 - __main__ - INFO - handle_collect:460 - Starting data collection...
+2025-07-07 12:00:55,981 - __main__ - INFO - _execute_data_collection:969 - Initializing storage manager...
+2025-07-07 12:00:55,982 - __main__ - INFO - _execute_data_collection:975 - Using configured symbols from universe...
+2025-07-07 12:00:55,983 - __main__ - INFO - _execute_data_collection:983 - Generated 5 symbols: ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'ADA/USDT', 'SOL/USDT']
+2025-07-07 12:00:55,983 - __main__ - INFO - _execute_data_collection:995 - Collecting data from 2025-07-06 to 2025-07-07
+2025-07-07 12:00:55,983 - __main__ - INFO - _execute_data_collection:1000 - Processing exchange: binance (spot)
+2025-07-07 12:00:57,757 - __main__ - INFO - _execute_data_collection:1016 - Collecting BTC/USDT from binance (spot)...
+2025-07-07 12:00:57,757 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:00:57,895 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_spot_btcusdt (1h, spot)
+2025-07-07 12:00:57,895 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:00:58,032 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_spot_btcusdt (1d, spot)
+2025-07-07 12:00:58,032 - __main__ - INFO - _execute_data_collection:1016 - Collecting ETH/USDT from binance (spot)...
+2025-07-07 12:00:58,032 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:00:58,166 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_spot_ethusdt (1h, spot)
+2025-07-07 12:00:58,166 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:00:58,308 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_spot_ethusdt (1d, spot)
+2025-07-07 12:00:58,308 - __main__ - INFO - _execute_data_collection:1016 - Collecting BNB/USDT from binance (spot)...
+2025-07-07 12:00:58,308 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:00:58,448 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_spot_bnbusdt (1h, spot)
+2025-07-07 12:00:58,448 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:00:58,590 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_spot_bnbusdt (1d, spot)
+2025-07-07 12:00:58,591 - __main__ - INFO - _execute_data_collection:1016 - Collecting ADA/USDT from binance (spot)...
+2025-07-07 12:00:58,591 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:00:58,731 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_spot_adausdt (1h, spot)
+2025-07-07 12:00:58,731 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:00:58,876 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_spot_adausdt (1d, spot)
+2025-07-07 12:00:58,876 - __main__ - INFO - _execute_data_collection:1016 - Collecting SOL/USDT from binance (spot)...
+2025-07-07 12:00:58,876 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:00:59,021 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_spot_solusdt (1h, spot)
+2025-07-07 12:00:59,021 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:00:59,163 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_spot_solusdt (1d, spot)
+2025-07-07 12:00:59,163 - __main__ - INFO - _execute_data_collection:1000 - Processing exchange: binance (perpetual)
+2025-07-07 12:01:00,846 - __main__ - INFO - _execute_data_collection:1016 - Collecting BTC/USDT from binance (perpetual)...
+2025-07-07 12:01:00,846 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:00,975 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_perpetual_btcusdt (1h, perpetual)
+2025-07-07 12:01:00,975 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:01,242 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_perpetual_btcusdt (1d, perpetual)
+2025-07-07 12:01:01,242 - __main__ - INFO - _execute_data_collection:1016 - Collecting ETH/USDT from binance (perpetual)...
+2025-07-07 12:01:01,242 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:01,497 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_perpetual_ethusdt (1h, perpetual)
+2025-07-07 12:01:01,497 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:01,741 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_perpetual_ethusdt (1d, perpetual)
+2025-07-07 12:01:01,741 - __main__ - INFO - _execute_data_collection:1016 - Collecting BNB/USDT from binance (perpetual)...
+2025-07-07 12:01:01,741 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:02,004 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_perpetual_bnbusdt (1h, perpetual)
+2025-07-07 12:01:02,004 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:02,251 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_perpetual_bnbusdt (1d, perpetual)
+2025-07-07 12:01:02,251 - __main__ - INFO - _execute_data_collection:1016 - Collecting ADA/USDT from binance (perpetual)...
+2025-07-07 12:01:02,251 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:02,513 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_perpetual_adausdt (1h, perpetual)
+2025-07-07 12:01:02,513 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:02,764 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_perpetual_adausdt (1d, perpetual)
+2025-07-07 12:01:02,764 - __main__ - INFO - _execute_data_collection:1016 - Collecting SOL/USDT from binance (perpetual)...
+2025-07-07 12:01:02,764 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:03,028 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for binance_perpetual_solusdt (1h, perpetual)
+2025-07-07 12:01:03,029 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:03,283 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for binance_perpetual_solusdt (1d, perpetual)
+2025-07-07 12:01:03,283 - __main__ - INFO - _execute_data_collection:1000 - Processing exchange: okx (spot)
+2025-07-07 12:01:04,273 - __main__ - INFO - _execute_data_collection:1016 - Collecting BTC/USDT from okx (spot)...
+2025-07-07 12:01:04,273 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:04,383 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_spot_btcusdt (1h, spot)
+2025-07-07 12:01:04,383 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:04,501 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_spot_btcusdt (1d, spot)
+2025-07-07 12:01:04,501 - __main__ - INFO - _execute_data_collection:1016 - Collecting ETH/USDT from okx (spot)...
+2025-07-07 12:01:04,501 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:04,625 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_spot_ethusdt (1h, spot)
+2025-07-07 12:01:04,625 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:04,747 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_spot_ethusdt (1d, spot)
+2025-07-07 12:01:04,747 - __main__ - INFO - _execute_data_collection:1016 - Collecting BNB/USDT from okx (spot)...
+2025-07-07 12:01:04,747 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:04,876 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_spot_bnbusdt (1h, spot)
+2025-07-07 12:01:04,876 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:05,003 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_spot_bnbusdt (1d, spot)
+2025-07-07 12:01:05,003 - __main__ - INFO - _execute_data_collection:1016 - Collecting ADA/USDT from okx (spot)...
+2025-07-07 12:01:05,003 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:05,127 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_spot_adausdt (1h, spot)
+2025-07-07 12:01:05,127 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:05,253 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_spot_adausdt (1d, spot)
+2025-07-07 12:01:05,253 - __main__ - INFO - _execute_data_collection:1016 - Collecting SOL/USDT from okx (spot)...
+2025-07-07 12:01:05,253 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:05,379 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_spot_solusdt (1h, spot)
+2025-07-07 12:01:05,379 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:05,505 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_spot_solusdt (1d, spot)
+2025-07-07 12:01:05,506 - __main__ - INFO - _execute_data_collection:1000 - Processing exchange: okx (perpetual)
+2025-07-07 12:01:06,418 - __main__ - INFO - _execute_data_collection:1016 - Collecting BTC/USDT from okx (perpetual)...
+2025-07-07 12:01:06,418 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:06,545 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_perpetual_btcusdt (1h, perpetual)
+2025-07-07 12:01:06,545 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:06,662 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_perpetual_btcusdt (1d, perpetual)
+2025-07-07 12:01:06,662 - __main__ - INFO - _execute_data_collection:1016 - Collecting ETH/USDT from okx (perpetual)...
+2025-07-07 12:01:06,662 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:06,770 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_perpetual_ethusdt (1h, perpetual)
+2025-07-07 12:01:06,770 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:06,878 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_perpetual_ethusdt (1d, perpetual)
+2025-07-07 12:01:06,878 - __main__ - INFO - _execute_data_collection:1016 - Collecting BNB/USDT from okx (perpetual)...
+2025-07-07 12:01:06,878 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:06,998 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_perpetual_bnbusdt (1h, perpetual)
+2025-07-07 12:01:06,998 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:07,107 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_perpetual_bnbusdt (1d, perpetual)
+2025-07-07 12:01:07,107 - __main__ - INFO - _execute_data_collection:1016 - Collecting ADA/USDT from okx (perpetual)...
+2025-07-07 12:01:07,107 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:07,216 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_perpetual_adausdt (1h, perpetual)
+2025-07-07 12:01:07,216 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:07,341 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_perpetual_adausdt (1d, perpetual)
+2025-07-07 12:01:07,341 - __main__ - INFO - _execute_data_collection:1016 - Collecting SOL/USDT from okx (perpetual)...
+2025-07-07 12:01:07,341 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1h
+2025-07-07 12:01:07,452 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 29 records for okx_perpetual_solusdt (1h, perpetual)
+2025-07-07 12:01:07,452 - __main__ - INFO - _execute_data_collection:1021 -   Timeframe: 1d
+2025-07-07 12:01:07,563 - __main__ - INFO - _execute_data_collection:1053 -     ✅ Stored 2 records for okx_perpetual_solusdt (1d, perpetual)
+2025-07-07 12:01:07,563 - __main__ - INFO - _execute_data_collection:1065 - ✅ Data collection completed!
+2025-07-07 12:01:07,570 - __main__ - INFO - handle_collect:466 - Collection completed successfully!

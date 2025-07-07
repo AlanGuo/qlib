@@ -131,7 +131,7 @@ class VolumeValidator(BaseValidator):
                     issues.append(self._create_issue(
                         ValidationSeverity.ERROR,
                         f"{col.capitalize()} ({data.loc[idx, col]}) is negative",
-                        field=col,
+                        field_name=col,
                         row_index=idx,
                         value=data.loc[idx, col]
                     ))
@@ -164,7 +164,7 @@ class VolumeValidator(BaseValidator):
                             ValidationSeverity.WARNING,
                             f"{col.capitalize()} ({data.loc[idx, col]}) is a statistical outlier "
                             f"(Log Z-score: {z_scores.loc[idx]:.2f})",
-                            field=col,
+                            field_name=col,
                             row_index=idx,
                             value=data.loc[idx, col],
                             log_z_score=z_scores.loc[idx]
@@ -186,7 +186,7 @@ class VolumeValidator(BaseValidator):
                     ValidationSeverity.WARNING,
                     f"High ratio of zero volume periods: {zero_volume_ratio:.2%} "
                     f"(threshold: {self.max_zero_volume_ratio:.2%})",
-                    field='volume',
+                    field_name='volume',
                     zero_volume_periods=zero_volume_periods,
                     total_periods=total_periods,
                     ratio=zero_volume_ratio
@@ -220,7 +220,7 @@ class VolumeValidator(BaseValidator):
                             f"Volume USD inconsistency: expected {expected_usd_volume.loc[idx]:.2f}, "
                             f"actual {actual_usd_volume.loc[idx]:.2f} "
                             f"(difference: {relative_diff:.2%})",
-                            field='volume_usd_24h',
+                            field_name='volume_usd_24h',
                             row_index=idx,
                             expected=expected_usd_volume.loc[idx],
                             actual=actual_usd_volume.loc[idx],

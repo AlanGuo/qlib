@@ -78,6 +78,7 @@ class CryptoCLI:
     def __init__(self):
         self.config = None  # Will be loaded when needed
         self.parser = self._create_parser()
+        self.logger = logging.getLogger(__name__)
 
     def create_parser(self) -> argparse.ArgumentParser:
         """Public method to create parser (for testing)."""
@@ -135,7 +136,7 @@ Examples:
         collect_parser.add_argument(
             '--template',
             type=str,
-            choices=['default', 'production', 'research', 'high_frequency', 'simple', 'multi_exchange'],
+            choices=['default', 'production', 'research', 'high_frequency', 'simple', 'multi_exchange', 'live_test_4_1'],
             help='Use a predefined configuration template'
         )
         
@@ -289,6 +290,12 @@ Examples:
             type=str,
             help='Data directory to validate'
         )
+        
+        validate_parser.add_argument(
+            '--verbose',
+            action='store_true',
+            help='Show detailed validation results including warnings'
+        )
     
     def _add_config_parser(self, subparsers):
         """Add configuration commands."""
@@ -413,8 +420,7 @@ Examples:
                 config = self._load_template_config(args.template)
             elif args.config:
                 print(f"Loading configuration file: {args.config}")
-                config = CryptoDataConfig()
-                config.load_from_file(args.config)
+                config = CryptoDataConfig.from_file(args.config)
             else:
                 print("Using default configuration")
                 config = CryptoDataConfig()
@@ -422,7 +428,7 @@ Examples:
                 if not args.exchanges:
                     config.collection.exchanges = ['binance']
                 if not args.timeframes:
-                    config.collection.timeframes = ['day']
+                    config.collection.timeframes = ['1d']
                 if not args.fields:
                     config.collection.fields = ['open', 'high', 'low', 'close', 'volume']
                 if not args.lookback_days:
@@ -434,6 +440,11 @@ Examples:
                 if not args.max_workers:
                     config.collection.max_workers = 4
             
+            # Setup logging from configuration
+            config.setup_logging()
+            # Update logger after logging setup
+            self.logger = logging.getLogger(__name__)
+            
             # Override with command line arguments
             self._override_config_from_args(config, args)
             
@@ -443,21 +454,22 @@ Examples:
                 return
             
             # Validate configuration
-            print("Validating configuration...")
+            self.logger.info("Validating configuration...")
             config.validate()
+            self.logger.info("Configuration validation completed successfully")
             
             # Initialize collector
-            print("Initializing data collector...")
+            self.logger.info("Initializing data collector...")
             collector = CryptoCollector(config)
             
             # Start collection
-            print("Starting data collection...")
+            self.logger.info("Starting data collection...")
             if args.verbose:
                 logging.getLogger().setLevel(logging.DEBUG)
             
             # Implement actual collection logic
             self._execute_data_collection(config)
-            print("Collection completed successfully!")
+            self.logger.info("Collection completed successfully!")
             
         except Exception as e:
             print(f"Error during collection: {e}")
@@ -502,7 +514,11 @@ Examples:
                 sys.exit(1)
         
         if args.data_dir:
-            print(f"Data validation for {args.data_dir} is not yet implemented")
+            try:
+                self._validate_data_directory(args.data_dir, verbose=getattr(args, 'verbose', False))
+            except Exception as e:
+                print(f"Data validation failed: {e}")
+                sys.exit(1)
     
     def handle_config(self, args):
         """Handle configuration commands."""
@@ -637,6 +653,262 @@ Examples:
 
         # Here you would implement the actual reset logic
         print("Incremental state reset completed!")
+    
+    def _validate_data_directory(self, data_dir: str, verbose: bool = False):
+        """Validate data in a directory using the crypto validation framework."""
+        from pathlib import Path
+        
+        # Check if data directory exists
+        data_path = Path(data_dir)
+        if not data_path.exists():
+            raise ValueError(f"Data directory does not exist: {data_dir}")
+        
+        # Try to import validation modules
+        try:
+            from data_validator import CryptoDataValidator
+            from config.validation_config import ValidationConfig
+            
+            print(f"Starting validation for data directory: {data_dir}")
+            print("=" * 60)
+            
+            # Create crypto-specific validation configuration
+            validation_config = ValidationConfig.create_crypto_specific_config()
+            
+            # Initialize validator
+            validator = CryptoDataValidator(validation_config)
+            
+            # Discover data files
+            data_files = self._discover_data_files(data_path)
+            
+            if not data_files:
+                print("❌ No data files found in directory")
+                return
+            
+            print(f"Found {len(data_files)} data files to validate")
+            print("-" * 60)
+            
+            # Track overall validation results
+            total_files = len(data_files)
+            successful_validations = 0
+            failed_validations = 0
+            
+            # Validate each data file
+            for file_info in data_files:
+                print(f"\nValidating: {file_info['instrument']} ({file_info['timeframe']})")
+                
+                try:
+                    # Load data using qlib format
+                    df = self._load_qlib_data(file_info)
+                    
+                    if df is None or df.empty:
+                        print(f"  ⚠️ No data found in {file_info['path']}")
+                        continue
+                    
+                    # Validate the data
+                    validation_report = validator.validate(
+                        data=df,
+                        symbol=file_info['instrument'],
+                        timeframe=file_info['timeframe']
+                    )
+                    
+                    # Display validation results
+                    if validation_report.overall_status == "PASS":
+                        print(f"  ✅ PASSED - {len(df)} records validated")
+                        successful_validations += 1
+                    else:
+                        status_msg = f"  ❌ FAILED - {validation_report.total_errors} errors, {validation_report.total_warnings} warnings"
+                        if validation_report.total_errors > 0:
+                            print(status_msg)
+                            failed_validations += 1
+                            
+                            # Show critical and error issues
+                            for result in validation_report.results:
+                                for issue in result.issues:
+                                    if issue.severity.value in ['critical', 'error']:
+                                        print(f"    {issue.severity.value.upper()}: {issue.message}")
+                        else:
+                            # Only warnings
+                            if verbose:
+                                print(f"  ⚠️ WARNINGS - {validation_report.total_warnings} warnings (passed)")
+                                # Show warning details in verbose mode
+                                for result in validation_report.results:
+                                    for issue in result.issues:
+                                        if issue.severity.value == 'warning':
+                                            field_info = f" ({issue.field_name})" if issue.field_name else ""
+                                            print(f"    WARNING{field_info}: {issue.message}")
+                            else:
+                                print(f"  ⚠️ WARNINGS - {validation_report.total_warnings} warnings (passed)")
+                            
+                            successful_validations += 1
+                    
+                    # Show performance metrics
+                    total_exec_time = sum(r.execution_time_ms for r in validation_report.results)
+                    print(f"  ⏱️ Validation time: {total_exec_time:.2f}ms")
+                    
+                except Exception as e:
+                    print(f"  ❌ ERROR: {e}")
+                    failed_validations += 1
+                    continue
+            
+            # Print summary
+            print("\n" + "=" * 60)
+            print("VALIDATION SUMMARY")
+            print("=" * 60)
+            print(f"Total files: {total_files}")
+            print(f"Successful validations: {successful_validations}")
+            print(f"Failed validations: {failed_validations}")
+            success_rate = (successful_validations / total_files) * 100 if total_files > 0 else 0
+            print(f"Success rate: {success_rate:.1f}%")
+            
+            if failed_validations > 0:
+                print(f"\n⚠️ {failed_validations} files failed validation")
+                raise ValueError(f"Data validation failed for {failed_validations} files")
+            else:
+                print("\n✅ All data files passed validation!")
+                
+        except ImportError as e:
+            print(f"❌ Validation modules not available: {e}")
+            print("Please ensure the validation framework is properly installed")
+            raise
+        except Exception as e:
+            print(f"❌ Validation failed: {e}")
+            raise
+    
+    def _discover_data_files(self, data_path: Path):
+        """Discover data files in the qlib data directory structure."""
+        data_files = []
+        
+        # Look for timeframe directories
+        for timeframe_dir in data_path.iterdir():
+            if timeframe_dir.is_dir() and timeframe_dir.name in ['1min', '5min', '15min', '30min', '1h', '60min', 'day', 'week']:
+                # Look for features directory
+                features_dir = timeframe_dir / 'features'
+                if features_dir.exists():
+                    # Look for instrument directories
+                    for instrument_dir in features_dir.iterdir():
+                        if instrument_dir.is_dir():
+                            # Look for .bin files
+                            for bin_file in instrument_dir.glob('*.bin'):
+                                field_name = bin_file.stem.split('.')[0]  # Extract field name
+                                data_files.append({
+                                    'path': str(bin_file),
+                                    'instrument': instrument_dir.name,
+                                    'timeframe': timeframe_dir.name,
+                                    'field': field_name
+                                })
+        
+        return data_files
+    
+    def _load_qlib_data(self, file_info):
+        """Load data from qlib binary format."""
+        try:
+            # Import required modules
+            import struct
+            import numpy as np
+            import pandas as pd
+            from datetime import datetime
+            from pathlib import Path
+            
+            # Get all field files for this instrument/timeframe
+            file_path = Path(file_info['path'])
+            instrument_dir = file_path.parent
+            timeframe = file_info['timeframe']
+            
+            # Expected fields for crypto data
+            expected_fields = ['open', 'high', 'low', 'close', 'volume']
+            
+            # Load all field files
+            field_data = {}
+            
+            for field in expected_fields:
+                field_file = instrument_dir / f"{field}.{timeframe}.bin"
+                if field_file.exists():
+                    # Load binary data
+                    field_data[field] = self._load_binary_field(field_file)
+            
+            if not field_data:
+                return None
+            
+            # Convert to DataFrame
+            # Assume all fields have the same length
+            first_field = list(field_data.values())[0]
+            num_records = len(first_field)
+            
+            # Create synthetic timestamps based on timeframe
+            timestamps = self._generate_timestamps(timeframe, num_records)
+            
+            # Create DataFrame
+            df = pd.DataFrame(field_data, index=timestamps)
+            
+            return df
+            
+        except Exception as e:
+            print(f"Error loading data from {file_info['path']}: {e}")
+            return None
+    
+    def _load_binary_field(self, file_path):
+        """Load a single binary field file using Qlib's format."""
+        try:
+            import struct
+            import numpy as np
+            
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            
+            # Qlib binary format: first 4 bytes are the start index, followed by data
+            if len(data) < 8:  # Need at least index + one data point
+                return np.array([])
+            
+            # Read first 4 bytes as start index (float32)
+            start_index = struct.unpack('<f', data[:4])[0]
+            
+            # Read remaining bytes as data values (float32)
+            data_bytes = data[4:]
+            num_values = len(data_bytes) // 4
+            values = struct.unpack(f'<{num_values}f', data_bytes)
+            
+            return np.array(values)
+            
+        except Exception as e:
+            print(f"Error loading binary field {file_path}: {e}")
+            return np.array([])
+    
+    def _generate_timestamps(self, timeframe, num_records):
+        """Generate timestamps for the data based on timeframe."""
+        try:
+            from datetime import datetime
+            import pandas as pd
+            
+            # Map timeframe to pandas frequency
+            freq_map = {
+                '1min': '1min',
+                '5min': '5min',
+                '15min': '15min',
+                '30min': '30min',
+                '1h': '1h',
+                '60min': '1h',
+                'day': '1D',
+                'week': '1W'
+            }
+            
+            freq = freq_map.get(timeframe, '1D')
+            
+            # Start from a recent date and go backwards
+            end_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # Generate timestamps
+            timestamps = pd.date_range(
+                end=end_date, 
+                periods=num_records, 
+                freq=freq
+            )
+            
+            return timestamps
+            
+        except Exception as e:
+            print(f"Error generating timestamps for {timeframe}: {e}")
+            # Fallback to simple integer index
+            return range(num_records)
 
     def _load_template_config(self, template_name: str) -> CryptoDataConfig:
         """Load configuration from template."""
@@ -647,6 +919,7 @@ Examples:
             'high_frequency': ConfigFactory.create_high_frequency_config,
             'simple': ConfigFactory.create_daily_config,
             'multi_exchange': ConfigFactory.create_multi_exchange_config,
+            'live_test_4_1': self._load_live_test_4_1_config,
         }
         
         factory_method = factory_methods.get(template_name)
@@ -654,6 +927,19 @@ Examples:
             raise ValueError(f"Unknown template: {template_name}")
         
         return factory_method()
+    
+    def _load_live_test_4_1_config(self) -> CryptoDataConfig:
+        """Load the live_test_4_1 configuration template."""
+        try:
+            from config.templates.live_test_4_1 import load_template
+            return load_template()
+        except ImportError:
+            # Fallback to loading from YAML file
+            config_path = Path(__file__).parent / 'config' / 'templates' / 'live_test_4_1.yaml'
+            if config_path.exists():
+                return CryptoDataConfig.from_file(str(config_path))
+            else:
+                raise ValueError("live_test_4_1 template not found")
     
     def _override_config_from_args(self, config: CryptoDataConfig, args):
         """Override configuration with command line arguments."""
@@ -710,12 +996,13 @@ Examples:
             from datetime import datetime, timedelta
             
             # Initialize storage manager
+            self.logger.info("Initializing storage manager...")
             storage_manager = CryptoStorageManager(data_dir=config.collection.output_dir)
             
             # Get symbols to collect
             symbols = config.collection.symbols
             if not symbols:
-                print("Using configured symbols from universe...")
+                self.logger.info("Using configured symbols from universe...")
                 # Use the base assets and quote assets from config to create symbols
                 base_assets = config.universe.filters.base_assets
                 quote_assets = config.universe.filters.quote_assets
@@ -723,7 +1010,7 @@ Examples:
                 for base in base_assets:
                     for quote in quote_assets:
                         symbols.append(f"{base}/{quote}")
-                print(f"Generated {len(symbols)} symbols: {symbols}")
+                self.logger.info(f"Generated {len(symbols)} symbols: {symbols}")
             
             # Calculate date range
             if config.collection.start_date and config.collection.end_date:
@@ -735,12 +1022,12 @@ Examples:
                 start_date = start_date.strftime('%Y-%m-%d')
                 end_date = end_date.strftime('%Y-%m-%d')
             
-            print(f"Collecting data from {start_date} to {end_date}")
+            self.logger.info(f"Collecting data from {start_date} to {end_date}")
             
             # Process each exchange and market type combination
             for exchange in config.collection.exchanges:
                 for market_type in config.universe.market_types:
-                    print(f"\n=== Processing exchange: {exchange} ({market_type}) ===")
+                    self.logger.info(f"Processing exchange: {exchange} ({market_type})")
                     
                     # Initialize adapter with specific market type
                     if exchange.lower() == 'binance':
@@ -748,7 +1035,7 @@ Examples:
                     elif exchange.lower() == 'okx':
                         adapter = OKXAdapter(market_type=market_type)
                     else:
-                        print(f"Warning: Unknown exchange {exchange}, skipping")
+                        self.logger.warning(f"Unknown exchange {exchange}, skipping")
                         continue
                     
                     # Initialize field collector
@@ -756,12 +1043,12 @@ Examples:
                     
                     # Process each symbol for this exchange-market_type combination
                     for symbol in symbols:
-                        print(f"\nCollecting {symbol} from {exchange} ({market_type})...")
+                        self.logger.info(f"Collecting {symbol} from {exchange} ({market_type})...")
                         
                         try:
                             # Collect data for each timeframe
                             for timeframe in config.collection.timeframes:
-                                print(f"  Timeframe: {timeframe}")
+                                self.logger.info(f"  Timeframe: {timeframe}")
                                 
                                 try:
                                     # Use CCXT native timeframe format directly
@@ -793,22 +1080,22 @@ Examples:
                                             freq=timeframe,
                                             market_type=market_type
                                         )
-                                        print(f"    ✅ Stored {len(df)} records for {instrument} ({timeframe}, {market_type})")
+                                        self.logger.info(f"    ✅ Stored {len(df)} records for {instrument} ({timeframe}, {market_type})")
                                     else:
-                                        print(f"    ⚠️ No data returned")
+                                        self.logger.warning(f"    ⚠️ No data returned for {symbol} {timeframe}")
                                         
                                 except Exception as e:
-                                    print(f"    ❌ Error collecting timeframe {timeframe}: {e}")
+                                    self.logger.error(f"    ❌ Error collecting timeframe {timeframe}: {e}")
                                     continue
                                     
                         except Exception as e:
-                            print(f"    ❌ Error collecting {symbol}: {e}")
+                            self.logger.error(f"    ❌ Error collecting {symbol}: {e}")
                             continue
             
-            print(f"\n✅ Data collection completed!")
+            self.logger.info("✅ Data collection completed!")
             
         except Exception as e:
-            print(f"❌ Collection failed: {e}")
+            self.logger.error(f"❌ Collection failed: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -841,11 +1128,12 @@ Examples:
             self.parser.print_help()
             return
         
-        # Setup logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+        # Setup basic logging (will be overridden by config.setup_logging() if a config file is used)
+        if not hasattr(args, 'config') or not args.config:
+            logging.basicConfig(
+                level=logging.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
         
         try:
             if args.command == 'collect':

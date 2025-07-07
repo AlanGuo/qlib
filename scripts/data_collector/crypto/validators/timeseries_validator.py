@@ -99,7 +99,7 @@ class TimeSeriesValidator(BaseValidator):
             issues.append(self._create_issue(
                 ValidationSeverity.CRITICAL,
                 f"Timestamp column '{self.timestamp_column}' not found and index is not datetime",
-                field=self.timestamp_column
+                field_name=self.timestamp_column
             ))
             return ValidationResult(
                 validator_name=self.name,
@@ -161,7 +161,7 @@ class TimeSeriesValidator(BaseValidator):
                         ValidationSeverity.ERROR,
                         f"Timestamp out of order at index {i}: "
                         f"{timestamps.iloc[i]} < {timestamps.iloc[i-1]}",
-                        field=self.timestamp_column,
+                        field_name=self.timestamp_column,
                         row_index=timestamps.index[i],
                         current_timestamp=timestamps.iloc[i],
                         previous_timestamp=timestamps.iloc[i-1]
@@ -181,7 +181,7 @@ class TimeSeriesValidator(BaseValidator):
             issues.append(self._create_issue(
                 ValidationSeverity.ERROR,
                 f"Found {duplicate_count} duplicate timestamps",
-                field=self.timestamp_column,
+                field_name=self.timestamp_column,
                 duplicate_count=duplicate_count,
                 sample_duplicates=duplicate_values[:5].tolist()  # Show first 5 duplicates
             ))
@@ -224,7 +224,7 @@ class TimeSeriesValidator(BaseValidator):
                 ValidationSeverity.WARNING,
                 f"Irregular time interval at index {idx}: "
                 f"{actual_interval:.1f}s (expected: {expected_interval:.1f}s)",
-                field=self.timestamp_column,
+                field_name=self.timestamp_column,
                 row_index=idx,
                 actual_interval=actual_interval,
                 expected_interval=expected_interval,
@@ -267,7 +267,7 @@ class TimeSeriesValidator(BaseValidator):
                 ValidationSeverity.WARNING,
                 f"High ratio of missing time periods: {missing_ratio:.2%} "
                 f"({missing_periods} missing out of {expected_periods} expected)",
-                field=self.timestamp_column,
+                field_name=self.timestamp_column,
                 missing_periods=missing_periods,
                 expected_periods=expected_periods,
                 missing_ratio=missing_ratio
@@ -285,7 +285,7 @@ class TimeSeriesValidator(BaseValidator):
                     ValidationSeverity.INFO,
                     f"Data gap at index {idx}: {gap_duration:.1f}s "
                     f"(approximately {missing_in_gap} missing periods)",
-                    field=self.timestamp_column,
+                    field_name=self.timestamp_column,
                     row_index=idx,
                     gap_duration=gap_duration,
                     estimated_missing_periods=missing_in_gap

@@ -129,7 +129,7 @@ class PriceValidator(BaseValidator):
             issues.append(self._create_issue(
                 ValidationSeverity.ERROR,
                 f"High price ({data.loc[idx, 'high']}) is less than max(open, close)",
-                field='high',
+                field_name='high',
                 row_index=idx,
                 value=data.loc[idx, 'high'],
                 open=data.loc[idx, 'open'],
@@ -142,7 +142,7 @@ class PriceValidator(BaseValidator):
             issues.append(self._create_issue(
                 ValidationSeverity.ERROR,
                 f"Low price ({data.loc[idx, 'low']}) is greater than min(open, close)",
-                field='low',
+                field_name='low',
                 row_index=idx,
                 value=data.loc[idx, 'low'],
                 open=data.loc[idx, 'open'],
@@ -155,7 +155,7 @@ class PriceValidator(BaseValidator):
             issues.append(self._create_issue(
                 ValidationSeverity.ERROR,
                 f"High price ({data.loc[idx, 'high']}) is less than low price ({data.loc[idx, 'low']})",
-                field='high',
+                field_name='high',
                 row_index=idx,
                 high=data.loc[idx, 'high'],
                 low=data.loc[idx, 'low']
@@ -174,7 +174,7 @@ class PriceValidator(BaseValidator):
                     issues.append(self._create_issue(
                         ValidationSeverity.ERROR,
                         f"{col.capitalize()} price ({data.loc[idx, col]}) is not positive",
-                        field=col,
+                        field_name=col,
                         row_index=idx,
                         value=data.loc[idx, col]
                     ))
@@ -202,7 +202,7 @@ class PriceValidator(BaseValidator):
                         ValidationSeverity.WARNING,
                         f"Excessive price change: {excessive_changes.loc[idx]:.2f}% "
                         f"(from {data.loc[prev_idx, 'close']} to {data.loc[idx, 'close']})",
-                        field='close',
+                        field_name='close',
                         row_index=idx,
                         change_pct=excessive_changes.loc[idx],
                         prev_price=data.loc[prev_idx, 'close'],
@@ -229,7 +229,7 @@ class PriceValidator(BaseValidator):
                             ValidationSeverity.WARNING,
                             f"{col.capitalize()} price ({data.loc[idx, col]}) is a statistical outlier "
                             f"(Z-score: {z_scores.loc[idx]:.2f})",
-                            field=col,
+                            field_name=col,
                             row_index=idx,
                             value=data.loc[idx, col],
                             z_score=z_scores.loc[idx]

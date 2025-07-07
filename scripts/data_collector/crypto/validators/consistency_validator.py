@@ -155,7 +155,7 @@ class ConsistencyValidator(BaseValidator):
                             f"Volume USD inconsistency at index {idx}: "
                             f"expected {expected_volume_usd:.2f}, actual {volume_usd:.2f} "
                             f"(difference: {relative_diff:.2%})",
-                            field='volume_usd_24h',
+                            field_name='volume_usd_24h',
                             row_index=idx,
                             expected=expected_volume_usd,
                             actual=volume_usd,
@@ -174,7 +174,7 @@ class ConsistencyValidator(BaseValidator):
                         issues.append(self._create_issue(
                             ValidationSeverity.WARNING,
                             f"24h volume ({volume_24h}) is much smaller than period volume ({volume}) at index {idx}",
-                            field='volume_24h',
+                            field_name='volume_24h',
                             row_index=idx,
                             volume_24h=volume_24h,
                             period_volume=volume
@@ -199,7 +199,7 @@ class ConsistencyValidator(BaseValidator):
                     ValidationSeverity.WARNING,
                     f"Funding rate ({data.loc[idx, 'funding_rate']:.4f}) outside normal range "
                     f"{self.funding_rate_range} at index {idx}",
-                    field='funding_rate',
+                    field_name='funding_rate',
                     row_index=idx,
                     value=data.loc[idx, 'funding_rate']
                 ))
@@ -217,7 +217,7 @@ class ConsistencyValidator(BaseValidator):
                     ValidationSeverity.WARNING,
                     f"24h change ({data.loc[idx, 'change_24h']:.2f}%) outside normal range "
                     f"{self.change_24h_range} at index {idx}",
-                    field='change_24h',
+                    field_name='change_24h',
                     row_index=idx,
                     value=data.loc[idx, 'change_24h']
                 ))
@@ -230,7 +230,7 @@ class ConsistencyValidator(BaseValidator):
                     issues.append(self._create_issue(
                         ValidationSeverity.ERROR,
                         f"Negative open interest ({data.loc[idx, 'open_interest']}) at index {idx}",
-                        field='open_interest',
+                        field_name='open_interest',
                         row_index=idx,
                         value=data.loc[idx, 'open_interest']
                     ))
@@ -243,7 +243,7 @@ class ConsistencyValidator(BaseValidator):
                     issues.append(self._create_issue(
                         ValidationSeverity.ERROR,
                         f"Negative bid-ask spread ({data.loc[idx, 'bid_ask_spread']}) at index {idx}",
-                        field='bid_ask_spread',
+                        field_name='bid_ask_spread',
                         row_index=idx,
                         value=data.loc[idx, 'bid_ask_spread']
                     ))
@@ -272,7 +272,7 @@ class ConsistencyValidator(BaseValidator):
                             ValidationSeverity.INFO,
                             f"24h change ({change_24h:.2f}%) doesn't match open/close calculation "
                             f"({expected_change:.2f}%) at index {idx}",
-                            field='change_24h',
+                            field_name='change_24h',
                             row_index=idx,
                             reported_change=change_24h,
                             calculated_change=expected_change,
@@ -298,7 +298,7 @@ class ConsistencyValidator(BaseValidator):
                     issues.append(self._create_issue(
                         ValidationSeverity.ERROR,
                         f"Field '{field}' should be numeric but has type {data[field].dtype}",
-                        field=field,
+                        field_name=field,
                         actual_dtype=str(data[field].dtype)
                     ))
                 
@@ -309,7 +309,7 @@ class ConsistencyValidator(BaseValidator):
                         issues.append(self._create_issue(
                             ValidationSeverity.ERROR,
                             f"Field '{field}' contains {inf_count} infinite values",
-                            field=field,
+                            field_name=field,
                             infinite_count=inf_count
                         ))
         

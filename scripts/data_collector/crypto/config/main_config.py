@@ -19,6 +19,7 @@ from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 import logging
+import logging.handlers
 
 from config.timeframes import TIMEFRAME_MAPPING, SUPPORTED_TIMEFRAMES
 from config.fields import CRYPTO_FIELDS, STANDARD_FIELDS, EXTENDED_FIELDS
@@ -35,7 +36,7 @@ class CollectionConfig:
     # Basic collection settings
     exchanges: List[str] = field(default_factory=lambda: ["binance"])
     symbols: List[str] = field(default_factory=list)  # Empty means auto-discover
-    timeframes: List[str] = field(default_factory=lambda: ["day"])
+    timeframes: List[str] = field(default_factory=lambda: ["1d"])
     fields: List[str] = field(default_factory=lambda: ["open", "high", "low", "close", "volume"])
     market_type: str = "spot"  # spot, futures, perpetual, option
     
@@ -441,6 +442,24 @@ class CryptoDataConfig:
                 if hasattr(config.collection, key):
                     setattr(config.collection, key, value)
 
+        if 'logging' in config_dict:
+            logging_dict = config_dict['logging']
+            for key, value in logging_dict.items():
+                if hasattr(config.logging, key):
+                    setattr(config.logging, key, value)
+
+        if 'performance' in config_dict:
+            performance_dict = config_dict['performance']
+            for key, value in performance_dict.items():
+                if hasattr(config.performance, key):
+                    setattr(config.performance, key, value)
+
+        if 'incremental' in config_dict:
+            incremental_dict = config_dict['incremental']
+            for key, value in incremental_dict.items():
+                if hasattr(config.incremental, key):
+                    setattr(config.incremental, key, value)
+
         if 'validation' in config_dict:
             validation_dict = config_dict['validation']
             for key, value in validation_dict.items():
@@ -451,7 +470,11 @@ class CryptoDataConfig:
             universe_dict = config_dict['universe']
             for key, value in universe_dict.items():
                 if hasattr(config.universe, key):
-                    setattr(config.universe, key, value)
+                    if key == 'filters' and isinstance(value, dict):
+                        # Convert filters dict to FilterConfig object
+                        config.universe.filters = FilterConfig(**value)
+                    else:
+                        setattr(config.universe, key, value)
 
         if 'risk' in config_dict:
             risk_dict = config_dict['risk']
@@ -508,6 +531,53 @@ class CryptoDataConfig:
                 raise ValueError(f"Unsupported file format: {file_path.suffix}")
 
         return cls.from_dict(config_dict)
+
+    def setup_logging(self):
+        """
+        Set up logging based on the configuration.
+        
+        This method configures both console and file logging according to
+        the logging configuration parameters.
+        """
+        # Get root logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(getattr(logging, self.logging.level.upper(), logging.INFO))
+        
+        # Clear existing handlers
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        
+        # Create formatter
+        formatter = logging.Formatter(self.logging.format)
+        
+        # Console handler (if enabled)
+        if self.logging.console_output:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            console_handler.setLevel(getattr(logging, self.logging.level.upper(), logging.INFO))
+            root_logger.addHandler(console_handler)
+        
+        # File handler (if file_path is specified)
+        if self.logging.file_path:
+            file_path = Path(self.logging.file_path)
+            
+            # Create directory if it doesn't exist
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Use RotatingFileHandler to manage log file size
+            file_handler = logging.handlers.RotatingFileHandler(
+                filename=file_path,
+                maxBytes=self.logging.max_file_size,
+                backupCount=self.logging.backup_count,
+                encoding='utf-8'
+            )
+            file_handler.setFormatter(formatter)
+            file_handler.setLevel(getattr(logging, self.logging.level.upper(), logging.INFO))
+            root_logger.addHandler(file_handler)
+            
+            self.logger.info(f"File logging configured: {file_path}")
+        
+        self.logger.info(f"Logging configured with level: {self.logging.level}")
 
 
 class ConfigFactory:

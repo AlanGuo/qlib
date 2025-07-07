@@ -22,8 +22,12 @@ TIMEFRAME_MAPPING: Dict[str, str] = {
     # Hour timeframes
     "1h": "1h",
     
-    # Day timeframes
-    "day": "day",
+    # Day/Week timeframes
+    "1d": "1d",
+    "1w": "1w",
+    
+    # Legacy support (deprecated)
+    "day": "1d",
 }
 
 # Exchange-specific timeframe mappings (qlib compatible)
@@ -35,6 +39,9 @@ EXCHANGE_TIMEFRAME_MAPPING: Dict[str, Dict[str, str]] = {
         "15min": "15m",
         "30min": "30m",
         "1h": "1h",
+        "1d": "1d",
+        "1w": "1w",
+        # Legacy support
         "day": "1d",
     },
     "okx": {
@@ -44,6 +51,9 @@ EXCHANGE_TIMEFRAME_MAPPING: Dict[str, Dict[str, str]] = {
         "15min": "15m",
         "30min": "30m",
         "1h": "1H",
+        "1d": "1D",
+        "1w": "1W",
+        # Legacy support
         "day": "1D",
     },
 }
@@ -52,23 +62,27 @@ EXCHANGE_TIMEFRAME_MAPPING: Dict[str, Dict[str, str]] = {
 SUPPORTED_TIMEFRAMES: Dict[str, List[str]] = {
     "minute": ["1min", "5min", "15min", "30min"],
     "hour": ["1h"],
-    "daily": ["day"],
+    "daily": ["1d"],
+    "weekly": ["1w"],
     "all": list(TIMEFRAME_MAPPING.keys()),
-    "common": ["1min", "5min", "15min", "1h", "day"],
+    "common": ["1min", "5min", "15min", "1h", "1d"],
     "trading": ["1min", "5min", "15min", "30min", "1h"],
-    "analysis": ["1h", "day"],
+    "analysis": ["1h", "1d", "1w"],
     "high_freq": ["1min", "5min"],
     "intraday": ["5min", "15min", "30min", "1h"],
+    "long_term": ["1d", "1w"],
 }
 
 # Timeframe priorities for data collection (higher number = higher priority)
 TIMEFRAME_PRIORITIES: Dict[str, int] = {
-    "day": 100,    # Highest priority - daily data
+    "1d": 100,     # Highest priority - daily data
     "1h": 90,      # High priority - hourly data
+    "1w": 85,      # Medium-high priority - weekly data
     "15min": 80,   # Medium-high priority
     "5min": 70,    # Medium priority
     "30min": 60,   # Medium-low priority
     "1min": 50,    # Lower priority
+    "day": 100,    # Legacy support - same as 1d
 }
 
 def get_exchange_timeframe(exchange: str, standard_timeframe: str) -> str:
@@ -149,7 +163,9 @@ def get_timeframe_seconds(timeframe: str) -> int:
         "15min": 900,
         "30min": 1800,
         "1h": 3600,
-        "day": 86400,
+        "1d": 86400,
+        "1w": 604800,     # 7 * 86400
+        "day": 86400,     # Legacy support
     }
     return timeframe_seconds.get(timeframe, 0)
 
@@ -250,8 +266,10 @@ def get_optimal_batch_size(timeframe: str, max_candles: int = 1000) -> int:
         return min(max_candles, 1000)
     elif seconds <= 3600:  # <= 1h
         return min(max_candles, 1500)
-    else:  # day
+    elif seconds <= 86400:  # <= 1d
         return min(max_candles, 2000)
+    else:  # 1w
+        return min(max_candles, 3000)
 
 def estimate_data_size(timeframe: str, days: int) -> int:
     """
@@ -296,7 +314,9 @@ def get_timeframe_display_name(timeframe: str) -> str:
         "15min": "15 Minutes",
         "30min": "30 Minutes",
         "1h": "1 Hour",
-        "day": "1 Day",
+        "1d": "1 Day",
+        "1w": "1 Week",
+        "day": "1 Day",  # Legacy support
     }
     return display_names.get(timeframe, timeframe)
 
@@ -336,6 +356,8 @@ def convert_to_qlib_freq(timeframe: str) -> str:
         "15min": "15min",
         "30min": "30min",
         "1h": "1h",
-        "day": "1d",
+        "1d": "1d",
+        "1w": "1w",
+        "day": "1d",      # Legacy support
     }
     return qlib_mapping.get(timeframe, timeframe)

@@ -10,7 +10,7 @@ collection:
   # 测试时间框架
   timeframes:
     - 1h
-    - day
+    - 1d
   
   # 核心字段
   fields:

@@ -150,7 +150,7 @@ class CompletenessValidator(BaseValidator):
             issues.append(self._create_issue(
                 ValidationSeverity.CRITICAL,
                 f"Required field '{field}' is missing",
-                field=field
+                field_name=field
             ))
         
         return issues
@@ -170,7 +170,7 @@ class CompletenessValidator(BaseValidator):
                             ValidationSeverity.ERROR,
                             f"Required field '{field}' has too many missing values: "
                             f"{missing_count}/{len(data)} ({missing_ratio:.2%})",
-                            field=field,
+                            field_name=field,
                             missing_count=missing_count,
                             total_count=len(data),
                             missing_ratio=missing_ratio
@@ -180,7 +180,7 @@ class CompletenessValidator(BaseValidator):
                             ValidationSeverity.WARNING,
                             f"Optional field '{field}' has many missing values: "
                             f"{missing_count}/{len(data)} ({missing_ratio:.2%})",
-                            field=field,
+                            field_name=field,
                             missing_count=missing_count,
                             total_count=len(data),
                             missing_ratio=missing_ratio
@@ -189,7 +189,7 @@ class CompletenessValidator(BaseValidator):
                         issues.append(self._create_issue(
                             ValidationSeverity.INFO,
                             f"Field '{field}' has {missing_count} missing values ({missing_ratio:.2%})",
-                            field=field,
+                            field_name=field,
                             missing_count=missing_count,
                             total_count=len(data),
                             missing_ratio=missing_ratio
