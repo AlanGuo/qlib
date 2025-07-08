@@ -10,7 +10,7 @@ collection:
   # Standard timeframes for multi-exchange
   timeframes:
     - 1h
-    - day
+    - 1d
   
   # Core fields available across exchanges
   fields:

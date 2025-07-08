@@ -7,14 +7,14 @@ collection:
     - binance
     - okx
   
-  # Comprehensive timeframes for research
+  # Comprehensive timeframes for research - using unified qlib format
   timeframes:
     - 1min
     - 5min
     - 15min
     - 30min
     - 1h
-    - day
+    - 1d
   
   # All available fields for research
   fields:

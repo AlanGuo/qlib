@@ -1,8 +1,11 @@
 #!/bin/bash
 # Phase 4.3 长期稳定性测试启动脚本
 
+# 切换到crypto目录的根目录
+cd "$(dirname "$0")/.."
+
 # 设置环境变量
-export CRYPTO_TEST_DATA_DIR="../test_data/stability_test"
+export CRYPTO_TEST_DATA_DIR="test_data/stability_test"
 
 echo "Phase 4.3 Long-term Stability Test"
 echo "=================================="
@@ -51,7 +54,7 @@ read -p "Run in background? (y/n): " background
 if [[ $background == "y" || $background == "Y" ]]; then
     # 后台运行
     echo "Starting test in background..."
-    nohup python ../test_long_term_stability.py --duration $duration > stability_test.out 2>&1 &
+    nohup python tests/run_long_term_stability.py --duration $duration > stability_test.out 2>&1 &
     PID=$!
     echo $PID > stability_test.pid
     echo "Test started with PID: $PID"
@@ -61,7 +64,7 @@ if [[ $background == "y" || $background == "Y" ]]; then
 else
     # 前台运行
     echo "Starting test in foreground (Ctrl+C to stop)..."
-    python ../test_long_term_stability.py --duration $duration
+    python tests/run_long_term_stability.py --duration $duration
 fi
 
 echo ""

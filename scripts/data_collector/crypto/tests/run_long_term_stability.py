@@ -47,6 +47,7 @@ try:
     from storage_manager import CryptoStorageManager
     from data_validator import CryptoDataValidator
     from config.validation_config import ValidationConfig
+    from qlib_data_generator import QlibDataGenerator
 except ImportError as e:
     print(f"Error: Could not import crypto collector modules: {e}")
     sys.exit(1)
@@ -105,7 +106,7 @@ class LongTermStabilityTest:
         self.end_time = self.start_time + timedelta(hours=test_duration_hours)
         
         # Test directory setup - use environment variable if available
-        test_data_dir = os.environ.get('CRYPTO_TEST_DATA_DIR', 'project_dir/test_data/stability_test')
+        test_data_dir = os.environ.get('CRYPTO_TEST_DATA_DIR', './test_data/stability_test')
         self.test_dir = Path(test_data_dir).resolve()
         self.test_dir.mkdir(parents=True, exist_ok=True)
         
@@ -253,6 +254,17 @@ class LongTermStabilityTest:
             validation_config = ValidationConfig.create_crypto_specific_config()
             self.validator = CryptoDataValidator(validation_config)
             self.logger.info("✅ Real data validator initialized")
+            
+            # Initialize qlib for QlibDataGenerator
+            import qlib
+            qlib.init(provider_uri=str(self.data_dir))
+            
+            # Initialize QlibDataGenerator for calendar and instruments
+            self.qlib_generator = QlibDataGenerator(
+                data_dir=str(self.data_dir),
+                provider_uri=str(self.data_dir)
+            )
+            self.logger.info("✅ Qlib data generator initialized")
             
             # Test the exchange adapters
             self.logger.info("Testing exchange adapter connections...")
@@ -614,6 +626,32 @@ class LongTermStabilityTest:
                         self.logger.info("Performing real data validation...")
                         validation_results = self.validate_collected_data()
                         self.logger.info(f"Real data quality score: {validation_results['data_quality_score']:.3f}")
+                        
+                        # Generate calendar and instruments files periodically
+                        self.logger.info("Generating Qlib calendar and instruments files...")
+                        try:
+                            # Calculate date range for calendar generation
+                            end_date = datetime.now()
+                            start_date = end_date - timedelta(days=30)  # Last 30 days
+                            
+                            # Generate calendar and instruments structure
+                            summary = self.qlib_generator.create_full_structure(
+                                timeframes=self.config.collection.timeframes,
+                                exchanges=self.config.collection.exchanges,
+                                symbols=symbols,
+                                start_date=start_date,
+                                end_date=end_date,
+                                market_type='spot'
+                            )
+                            
+                            self.logger.info(f"✅ Qlib structure generated: {summary['timeframes_created']} timeframes, "
+                                           f"{summary['instruments_files']} instruments files, "
+                                           f"{summary['calendar_files']} calendar files")
+                            
+                        except Exception as qlib_error:
+                            self.logger.error(f"❌ Failed to generate Qlib structure: {qlib_error}")
+                            import traceback
+                            self.logger.error(f"Qlib generation error details:\n{traceback.format_exc()}")
                 
                 # Wait before next collection cycle
                 cycle_delay = self.config.collection.rate_limit_delay * len(symbols)
@@ -850,7 +888,7 @@ Examples:
         pid = os.fork()
         if pid > 0:
             print(f"Stability test started in background with PID: {pid}")
-            print(f"Monitor logs at: project_dir/test_data/stability_test/logs/")
+            print(f"Monitor logs at: ./test_data/stability_test/logs/")
             print(f"Stop with: kill {pid}")
             sys.exit(0)
     

@@ -617,7 +617,7 @@ class ConfigFactory:
         config = CryptoDataConfig()
 
         # Daily collection settings
-        config.collection.timeframes = ["day"]
+        config.collection.timeframes = ["1d"]
         config.collection.max_workers = 4
         config.collection.lookback_days = 365
         config.collection.enable_risk_metrics = True
@@ -634,7 +634,7 @@ class ConfigFactory:
 
         # Multi-exchange settings
         config.collection.exchanges = ["binance", "okx"]
-        config.collection.timeframes = ["1h", "day"]
+        config.collection.timeframes = ["1h", "1d"]
         config.collection.max_workers = 6
         config.collection.enable_extended_fields = True
 
@@ -651,7 +651,7 @@ class ConfigFactory:
         config = CryptoDataConfig()
 
         # Research settings
-        config.collection.timeframes = ["1min", "5min", "15min", "30min", "1h", "day"]
+        config.collection.timeframes = ["1min", "5min", "15min", "30min", "1h", "1d"]
         config.collection.enable_extended_fields = True
         config.collection.enable_risk_metrics = True
         config.collection.lookback_days = 730  # 2 years
@@ -675,7 +675,7 @@ class ConfigFactory:
         config = CryptoDataConfig()
 
         # Production settings
-        config.collection.timeframes = ["1h", "day"]
+        config.collection.timeframes = ["1h", "1d"]
         config.collection.max_workers = 4
         config.collection.retry_attempts = 5
         config.collection.incremental_update = True
@@ -705,7 +705,7 @@ class ConfigFactory:
 
         # Minimal settings
         config.collection.exchanges = ["binance"]
-        config.collection.timeframes = ["day"]
+        config.collection.timeframes = ["1d"]
         config.collection.fields = ["open", "high", "low", "close", "volume"]
         config.collection.max_workers = 1
         config.collection.enable_extended_fields = False
@@ -721,7 +721,7 @@ class ConfigFactory:
 
         # Multi-exchange settings
         config.collection.exchanges = ["binance", "okx"]
-        config.collection.timeframes = ["1h", "day"]
+        config.collection.timeframes = ["1h", "1d"]
         config.collection.max_workers = 6
         config.collection.enable_extended_fields = True
 

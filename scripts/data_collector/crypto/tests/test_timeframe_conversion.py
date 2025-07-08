@@ -57,7 +57,7 @@ class TestTimeframeValidation:
 
     def test_invalid_timeframes(self):
         """Test validation correctly rejects invalid timeframes."""
-        invalid_timeframes = ["1s", "3m", "4h", "1w", "1M"]
+        invalid_timeframes = ["1s", "3m", "4h", "1M"]
 
         for tf in invalid_timeframes:
             assert not validate_timeframe(tf), f"Invalid timeframe {tf} passed validation"
@@ -75,8 +75,11 @@ class TestQlibConversion:
             "5min": "5min",
             "15min": "15min",
             "30min": "30min",
-            "1h": "1h",
-            "day": "1d"
+            "1h": "60min",     # 1h maps to qlib's 60min format
+            "1d": "1d",        # 1d maps to qlib's 1d format
+            "1w": "1w",        # 1w maps to qlib's 1w format
+            "day": "1d",       # Legacy support - convert to qlib format
+            "week": "1w"       # Legacy support - convert to qlib format
         }
 
         for input_tf, expected_output in test_cases.items():

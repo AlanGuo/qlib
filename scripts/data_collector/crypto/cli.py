@@ -92,7 +92,7 @@ class CryptoCLI:
             epilog="""
 Examples:
   # Collect daily data from Binance
-  python cli.py collect --exchanges binance --timeframes day --symbols BTC/USDT ETH/USDT
+  python cli.py collect --exchanges binance --timeframes 1d --symbols BTC/USDT ETH/USDT
   
   # Use a configuration template
   python cli.py collect --template production
@@ -163,7 +163,7 @@ Examples:
         collect_parser.add_argument(
             '--timeframes',
             nargs='+',
-            choices=['1min', '5min', '15min', '30min', '1h', 'day'],
+            choices=['1min', '5min', '15min', '30min', '1h', '1d'],
             help='Timeframes to collect'
         )
         
@@ -355,7 +355,7 @@ Examples:
         update_parser.add_argument(
             '--timeframes',
             nargs='+',
-            choices=['1min', '5min', '15min', '30min', '1h', 'day'],
+            choices=['1min', '5min', '15min', '30min', '1h', '1d'],
             help='Timeframes to update (default: all configured)'
         )
         update_parser.add_argument(
@@ -780,7 +780,7 @@ Examples:
         
         # Look for timeframe directories
         for timeframe_dir in data_path.iterdir():
-            if timeframe_dir.is_dir() and timeframe_dir.name in ['1min', '5min', '15min', '30min', '1h', '60min', 'day', 'week']:
+            if timeframe_dir.is_dir() and timeframe_dir.name in ['1min', '5min', '15min', '30min', '1h', '60min', '1d', '1w', 'day', 'week']:
                 # Look for features directory
                 features_dir = timeframe_dir / 'features'
                 if features_dir.exists():
@@ -979,11 +979,16 @@ Examples:
             from exchange_adapters.binance_adapter import BinanceAdapter
             from exchange_adapters.okx_adapter import OKXAdapter
             from storage_manager import CryptoStorageManager
+            from qlib_data_generator import QlibDataGenerator
             from datetime import datetime, timedelta
             
             # Initialize storage manager
             self.logger.info("Initializing storage manager...")
             storage_manager = CryptoStorageManager(data_dir=config.collection.output_dir)
+            
+            # Initialize Qlib data generator for calendar and instruments
+            self.logger.info("Initializing Qlib data generator...")
+            qlib_generator = QlibDataGenerator(data_dir=config.collection.output_dir)
             
             # Get symbols to collect
             symbols = config.collection.symbols
@@ -1037,13 +1042,9 @@ Examples:
                                 self.logger.info(f"  Timeframe: {timeframe}")
                                 
                                 try:
-                                    # Use CCXT native timeframe format directly
-                                    if timeframe == 'day':
-                                        ccxt_timeframe = '1d'
-                                    elif timeframe == '1h':
-                                        ccxt_timeframe = '1h'
-                                    else:
-                                        ccxt_timeframe = timeframe
+                                    # Use centralized timeframe conversion
+                                    from config.timeframes import get_exchange_timeframe
+                                    ccxt_timeframe = get_exchange_timeframe(adapter.exchange_id, timeframe)
                                     
                                     # Get OHLCV data directly from adapter
                                     df = adapter.get_ohlcv(
@@ -1077,6 +1078,41 @@ Examples:
                         except Exception as e:
                             self.logger.error(f"    ❌ Error collecting {symbol}: {e}")
                             continue
+            
+            # After all data collection, generate Qlib structure files
+            self.logger.info("Generating Qlib calendar and instruments files...")
+            
+            # Collect all instruments that were processed
+            all_instruments = []
+            all_exchanges = config.collection.exchanges
+            all_market_types = config.universe.market_types
+            
+            for exchange in all_exchanges:
+                for market_type in all_market_types:
+                    for symbol in symbols:
+                        base_instrument = symbol.replace('/', '')
+                        instrument = f"{exchange.lower()}_{market_type}_{base_instrument.lower()}"
+                        all_instruments.append(instrument)
+            
+            # Calculate date range for calendars
+            if config.collection.start_date and config.collection.end_date:
+                start_date = datetime.strptime(config.collection.start_date, '%Y-%m-%d')
+                end_date = datetime.strptime(config.collection.end_date, '%Y-%m-%d')
+            else:
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=config.collection.lookback_days)
+            
+            # Generate complete Qlib structure
+            structure_summary = qlib_generator.create_full_structure(
+                timeframes=config.collection.timeframes,
+                exchanges=all_exchanges,
+                symbols=symbols,
+                start_date=start_date,
+                end_date=end_date,
+                market_type="spot"  # Default to spot for structure creation
+            )
+            
+            self.logger.info(f"Qlib structure generation completed: {structure_summary}")
             
             self.logger.info("✅ Data collection completed!")
             

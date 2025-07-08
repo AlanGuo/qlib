@@ -26,52 +26,7 @@ from qlib.utils import get_module_logger
 import qlib
 
 from config.fields import STANDARD_FIELDS, CRYPTO_SPECIFIC_FIELDS
-from config.timeframes import TIMEFRAME_MAPPING, validate_timeframe
-
-
-def convert_to_qlib_freq(timeframe: str) -> str:
-    """
-    Convert crypto timeframe to qlib frequency format.
-
-    Parameters
-    ----------
-    timeframe : str
-        Crypto timeframe (e.g., "1h", "1d", "5m")
-
-    Returns
-    -------
-    str
-        Qlib frequency format (e.g., "60min", "day", "5min")
-    """
-    # Mapping from crypto timeframes to qlib frequencies
-    qlib_freq_mapping = {
-        # Minutes
-        "1m": "1min",
-        "3m": "3min",
-        "5m": "5min",
-        "15m": "15min",
-        "30m": "30min",
-
-        # Hours (convert to minutes)
-        "1h": "60min",
-        "2h": "120min",
-        "4h": "240min",
-        "6h": "360min",
-        "8h": "480min",
-        "12h": "720min",
-
-        # Days
-        "1d": "day",
-        "3d": "3day",  # Not standard but might work
-
-        # Weeks
-        "1w": "week",
-
-        # Months
-        "1M": "month",
-    }
-
-    return qlib_freq_mapping.get(timeframe, timeframe)
+from config.timeframes import TIMEFRAME_MAPPING, validate_timeframe, convert_to_qlib_freq
 
 
 class CryptoStorageManager:
@@ -182,9 +137,12 @@ class CryptoStorageManager:
             if field not in STANDARD_FIELDS and field not in CRYPTO_SPECIFIC_FIELDS:
                 self.logger.warning(f"Unknown field: {field}")
 
-            # Convert to qlib frequency format
+            # Use original frequency for directory structure, but convert for qlib internal storage
+            # Note: We keep directory names consistent with user config (1h, 1d, 1w)
+            # but qlib's FileFeatureStorage expects certain formats internally
             qlib_freq = convert_to_qlib_freq(freq)
-            # Create storage instance
+            
+            # Create storage instance with qlib frequency for internal compatibility
             storage = FileFeatureStorage(
                 instrument=instrument,
                 field=field,

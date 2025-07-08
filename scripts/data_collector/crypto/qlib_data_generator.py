@@ -45,7 +45,16 @@ class QlibDataGenerator:
             Provider URI for Qlib storage (can be string or frequency mapping dict)
         """
         self.data_dir = Path(data_dir)
-        self.provider_uri = provider_uri
+        
+        # Ensure provider_uri is a string pointing to data_dir
+        if provider_uri is None:
+            self.provider_uri = str(data_dir)
+        elif isinstance(provider_uri, dict):
+            # If it's a dict, use the first value or default to data_dir
+            self.provider_uri = list(provider_uri.values())[0] if provider_uri else str(data_dir)
+        else:
+            self.provider_uri = provider_uri
+            
         self.logger = get_module_logger("QlibDataGenerator")
         
         # Ensure base directory exists
@@ -128,8 +137,9 @@ class QlibDataGenerator:
             'feature_directories': 0
         }
         
-        # Create timeframe directory
-        tf_dir = self.data_dir / timeframe
+        # Create timeframe directory using qlib format for consistency
+        qlib_timeframe = convert_to_qlib_freq(timeframe)
+        tf_dir = self.data_dir / qlib_timeframe
         tf_dir.mkdir(exist_ok=True)
         
         # Create subdirectories
@@ -142,11 +152,11 @@ class QlibDataGenerator:
         
         # Create instruments file
         instruments = self._generate_instruments_list(exchanges, symbols, market_type)
-        self._create_instruments_file(instruments, "crypto", timeframe)
+        self._create_instruments_file(instruments, "crypto", qlib_timeframe)
         summary['instruments_files'] = 1
         
         # Create calendar files
-        self._create_calendar_files(timeframe, start_date, end_date)
+        self._create_calendar_files(qlib_timeframe, start_date, end_date)
         summary['calendar_files'] = 2  # Regular and future calendars
         
         # Create feature directories for each instrument
@@ -163,8 +173,9 @@ class QlibDataGenerator:
         
         for exchange in exchanges:
             for symbol in symbols:
-                # Convert symbol to instrument format, including market type
-                symbol_clean = symbol.replace('/', '_').lower()
+                # Convert symbol to instrument format, matching data collection naming
+                # Remove '/' and make lowercase to match actual data collection format
+                symbol_clean = symbol.replace('/', '').lower()
                 instrument = f"{exchange.lower()}_{market_type.lower()}_{symbol_clean}"
                 instruments.append(instrument)
         
@@ -179,32 +190,18 @@ class QlibDataGenerator:
             # Convert to qlib frequency format
             qlib_freq = convert_to_qlib_freq(freq)
 
-            # Ensure instruments directory exists
-            if isinstance(self.provider_uri, dict):
-                # Use the first available path from provider_uri
-                base_path = Path(list(self.provider_uri.values())[0])
-            else:
-                base_path = Path(self.provider_uri) if self.provider_uri else self.data_dir
-
-            instruments_dir = base_path / "instruments"
+            # Use data_dir as base path and ensure correct structure with qlib format
+            tf_dir = self.data_dir / qlib_freq
+            instruments_dir = tf_dir / "instruments"
             instruments_dir.mkdir(parents=True, exist_ok=True)
 
-            storage = FileInstrumentStorage(
-                market=market,
-                freq=qlib_freq,
-                provider_uri=self.provider_uri
-            )
+            # Create instruments file directly
+            instruments_file = instruments_dir / f"{market}.txt"
             
-            # Create instrument data with trading periods
-            # For crypto, assume 24/7 trading from 2020 to 2030
-            instrument_data = {}
-            for instrument in instruments:
-                instrument_data[instrument] = [
-                    (datetime(2020, 1, 1), datetime(2030, 12, 31))
-                ]
-            
-            # Write instrument data
-            storage._write_instrument(instrument_data)
+            with open(instruments_file, 'w') as f:
+                for instrument in instruments:
+                    # Each line: instrument_name start_date end_date
+                    f.write(f"{instrument}\t2020-01-01\t2030-12-31\n")
             
             self.logger.debug(f"Created instruments file for {market}.{freq} with {len(instruments)} instruments")
             
@@ -235,42 +232,69 @@ class QlibDataGenerator:
             # Convert to qlib frequency format
             qlib_freq = convert_to_qlib_freq(freq)
 
-            # Ensure calendars directory exists
-            if isinstance(self.provider_uri, dict):
-                # Use the first available path from provider_uri
-                base_path = Path(list(self.provider_uri.values())[0])
-            else:
-                base_path = Path(self.provider_uri) if self.provider_uri else self.data_dir
-
-            calendars_dir = base_path / "calendars"
+            # Use data_dir as base path and ensure correct structure with qlib format
+            tf_dir = self.data_dir / qlib_freq
+            calendars_dir = tf_dir / "calendars"
             calendars_dir.mkdir(parents=True, exist_ok=True)
 
-            storage = FileCalendarStorage(
-                freq=qlib_freq,
-                future=future,
-                provider_uri=self.provider_uri
-            )
-            
-            # Generate calendar based on frequency
-            if freq == "1d":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='D')
-            elif freq == "1h":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='H')
-            elif freq == "5m":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='5T')
-            elif freq == "1m":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='T')
+            # Normalize start_date based on frequency to ensure proper alignment
+            if qlib_freq == "1d":
+                # For daily, start at midnight
+                aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
+            elif qlib_freq == "60min":
+                # For hourly, start at top of hour
+                aligned_start = start_date.replace(minute=0, second=0, microsecond=0)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='h')
+            elif qlib_freq == "5min":
+                # For 5min, align to 5-minute intervals
+                aligned_start = start_date.replace(minute=(start_date.minute // 5) * 5, second=0, microsecond=0)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='5min')
+            elif qlib_freq == "1min":
+                # For 1min, align to minute boundary
+                aligned_start = start_date.replace(second=0, microsecond=0)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='min')
+            elif qlib_freq == "15min":
+                # For 15min, align to 15-minute intervals  
+                aligned_start = start_date.replace(minute=(start_date.minute // 15) * 15, second=0, microsecond=0)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='15min')
+            elif qlib_freq == "30min":
+                # For 30min, align to 30-minute intervals
+                aligned_start = start_date.replace(minute=(start_date.minute // 30) * 30, second=0, microsecond=0)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='30min')
             else:
-                # For other frequencies, try to parse
+                # For other frequencies, try reasonable mappings using qlib format
+                freq_mapping = {
+                    "1w": "W",    # qlib weekly format
+                    "week": "W",  # Legacy weekly support
+                }
+                pandas_freq = freq_mapping.get(qlib_freq, 'D')  # Default to daily
                 try:
-                    calendar = pd.date_range(start=start_date, end=end_date, freq=freq.upper())
+                    # For weekly, align to start of week (Monday)
+                    if pandas_freq == "W":
+                        aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                        # Adjust to start of week (Monday)
+                        days_since_monday = aligned_start.weekday()
+                        aligned_start = aligned_start - timedelta(days=days_since_monday)
+                    else:
+                        aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    calendar = pd.date_range(start=aligned_start, end=end_date, freq=pandas_freq)
                 except Exception:
                     # Fallback to daily
-                    calendar = pd.date_range(start=start_date, end=end_date, freq='D')
-                    self.logger.warning(f"Unknown frequency {freq}, using daily calendar")
+                    aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
+                    self.logger.warning(f"Unknown frequency {qlib_freq}, using daily calendar")
             
-            # Write calendar
-            storage._write_calendar(calendar)
+            # Create calendar file name using qlib format
+            if future:
+                calendar_file = calendars_dir / f"{qlib_freq}_future.txt"
+            else:
+                calendar_file = calendars_dir / f"{qlib_freq}.txt"
+            
+            # Write calendar file directly
+            with open(calendar_file, 'w') as f:
+                for timestamp in calendar:
+                    f.write(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')}\n")
             
             calendar_type = "future" if future else "regular"
             self.logger.debug(f"Created {calendar_type} calendar for {freq} with {len(calendar)} entries")
@@ -324,8 +348,9 @@ class QlibDataGenerator:
                 # Write updated data
                 storage._write_instrument(updated_data)
                 
-                # Create feature directories for new instruments
-                features_dir = self.data_dir / timeframe / "features"
+                # Create feature directories for new instruments using qlib format
+                qlib_timeframe = convert_to_qlib_freq(timeframe)
+                features_dir = self.data_dir / qlib_timeframe / "features"
                 for instrument in new_instruments:
                     if instrument not in existing_instruments:
                         instrument_dir = features_dir / instrument

@@ -42,7 +42,7 @@ class TestConfigLoading:
         
         # Check default values
         assert config.collection.exchanges == ["binance"]
-        assert "day" in config.collection.timeframes
+        assert "1d" in config.collection.timeframes
         
     def test_config_from_dict(self):
         """Test creating configuration from dictionary."""
@@ -182,7 +182,7 @@ class TestConfigFactory:
         config = ConfigFactory.create_daily_config()
         
         # Should include daily timeframe
-        assert "day" in config.collection.timeframes
+        assert "1d" in config.collection.timeframes
         
         # Should be valid
         config.validate()
@@ -326,14 +326,14 @@ class TestTimeframeValidation:
     
     def test_supported_timeframes(self):
         """Test supported timeframe validation."""
-        supported_timeframes = ["1min", "5min", "15min", "30min", "1h", "day"]
+        supported_timeframes = ["1min", "5min", "15min", "30min", "1h", "1d"]
         
         for timeframe in supported_timeframes:
             assert validate_timeframe(timeframe)
     
     def test_unsupported_timeframes(self):
         """Test unsupported timeframe validation."""
-        unsupported_timeframes = ["1s", "3m", "4h", "1w", "1M"]
+        unsupported_timeframes = ["1s", "3m", "4h", "1M"]
         
         for timeframe in unsupported_timeframes:
             assert not validate_timeframe(timeframe)

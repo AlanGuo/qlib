@@ -28,6 +28,7 @@ TIMEFRAME_MAPPING: Dict[str, str] = {
     
     # Legacy support (deprecated)
     "day": "1d",
+    "week": "1w",
 }
 
 # Exchange-specific timeframe mappings (qlib compatible)
@@ -43,6 +44,7 @@ EXCHANGE_TIMEFRAME_MAPPING: Dict[str, Dict[str, str]] = {
         "1w": "1w",
         # Legacy support
         "day": "1d",
+        "week": "1w",
     },
     "okx": {
         # Convert qlib format to OKX API format
@@ -55,6 +57,7 @@ EXCHANGE_TIMEFRAME_MAPPING: Dict[str, Dict[str, str]] = {
         "1w": "1W",
         # Legacy support
         "day": "1D",
+        "week": "1W",
     },
 }
 
@@ -129,7 +132,7 @@ def get_standard_timeframe(exchange: str, exchange_timeframe: str) -> str:
 
 def validate_timeframe(timeframe: str) -> bool:
     """
-    Validate if timeframe is supported.
+    Validate if timeframe is supported (accepts both standard and qlib formats).
     
     Parameters
     ----------
@@ -141,7 +144,13 @@ def validate_timeframe(timeframe: str) -> bool:
     bool
         True if timeframe is supported
     """
-    return timeframe in TIMEFRAME_MAPPING
+    # Check if it's in standard mapping
+    if timeframe in TIMEFRAME_MAPPING:
+        return True
+    
+    # Check if it's a qlib format (reverse mapping)
+    qlib_formats = set(convert_to_qlib_freq(tf) for tf in TIMEFRAME_MAPPING.keys())
+    return timeframe in qlib_formats
 
 def get_timeframe_seconds(timeframe: str) -> int:
     """
@@ -339,6 +348,9 @@ def is_qlib_compatible_timeframe(timeframe: str) -> bool:
 def convert_to_qlib_freq(timeframe: str) -> str:
     """
     Convert timeframe to qlib frequency format.
+    
+    NOTE: This is the SINGLE authoritative function for qlib format conversion.
+    All other modules should import and use this function.
 
     Parameters
     ----------
@@ -348,16 +360,19 @@ def convert_to_qlib_freq(timeframe: str) -> str:
     Returns
     -------
     str
-        Qlib frequency format
+        Qlib frequency format (for qlib storage backend)
     """
+    # For qlib compatibility, we map to qlib's internal frequency format
+    # Based on qlib error: "freq should be like (n)month/mon, (n)week/w, (n)day/d, (n)minute/min"
     qlib_mapping = {
-        "1min": "1min",
-        "5min": "5min",
-        "15min": "15min",
-        "30min": "30min",
-        "1h": "1h",
-        "1d": "1d",
-        "1w": "1w",
-        "day": "1d",      # Legacy support
+        "1min": "1min",     # qlib supports this format
+        "5min": "5min",     # qlib supports this format  
+        "15min": "15min",   # qlib supports this format
+        "30min": "30min",   # qlib supports this format
+        "1h": "60min",      # Convert to minutes for qlib compatibility
+        "1d": "1d",         # qlib prefers this format for daily
+        "1w": "1w",         # qlib prefers this format for weekly
+        "day": "1d",        # Convert legacy to qlib format
+        "week": "1w",       # Convert legacy to qlib format
     }
     return qlib_mapping.get(timeframe, timeframe)

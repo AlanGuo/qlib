@@ -9,9 +9,9 @@ collection:
   # Basic symbols (empty for auto-discovery)
   symbols: []
   
-  # Single timeframe
+  # Single timeframe - using unified qlib format
   timeframes:
-    - day
+    - 1d
   
   # Core OHLCV fields only
   fields:

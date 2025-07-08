@@ -1,0 +1,72 @@
+qlib_init:
+    provider_uri: "~/.qlib/crypto_data"  # Crypto data path
+    region: crypto
+market: &market crypto_universe
+benchmark: &benchmark BTCUSDT  # Use BTC as benchmark
+data_handler_config: &data_handler_config
+    start_time: 2023-01-01
+    end_time: 2024-01-01
+    fit_start_time: 2023-01-01
+    fit_end_time: 2023-06-30
+    instruments: *market
+    freq: 1h  # Hourly frequency for crypto
+port_analysis_config: &port_analysis_config
+    strategy:
+        class: TopkDropoutStrategy
+        module_path: qlib.contrib.strategy
+        kwargs:
+            signal: <PRED>
+            topk: 10  # Top 10 cryptos to short
+            n_drop: 2  # Drop worst 2
+    backtest:
+        start_time: 2023-07-01
+        end_time: 2024-01-01
+        account: 1000000  # 1M USDT
+        benchmark: *benchmark
+        exchange_kwargs:
+            limit_threshold: 0.095
+            deal_price: close
+            open_cost: 0.001  # 0.1% trading fee
+            close_cost: 0.001
+            min_cost: 1
+task:
+    model:
+        class: LGBModel
+        module_path: qlib.contrib.model.gbdt
+        kwargs:
+            loss: mse
+            colsample_bytree: 0.8
+            learning_rate: 0.1
+            subsample: 0.8
+            lambda_l1: 100
+            lambda_l2: 200
+            max_depth: 6
+            num_leaves: 100
+            num_threads: 8
+    dataset:
+        class: DatasetH
+        module_path: qlib.data.dataset
+        kwargs:
+            handler:
+                class: CryptoAlpha158
+                module_path: qlib.contrib.data.handler
+                kwargs: *data_handler_config
+            segments:
+                train: [2023-01-01, 2023-06-30]
+                valid: [2023-07-01, 2023-09-30]
+                test: [2023-10-01, 2024-01-01]
+    record: 
+        - class: SignalRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            model: <MODEL>
+            dataset: <DATASET>
+        - class: SigAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            ana_long_short: False
+            ann_scaler: 8760  # Hours in a year for crypto
+        - class: PortAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            config: *port_analysis_config

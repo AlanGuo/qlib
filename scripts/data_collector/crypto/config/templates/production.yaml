@@ -7,10 +7,10 @@ collection:
     - binance
     - okx
   
-  # Standard timeframes for production
+  # Standard timeframes for production - using unified qlib format
   timeframes:
     - 1h
-    - day
+    - 1d
   
   # Core fields for production
   fields:

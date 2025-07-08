@@ -48,7 +48,7 @@ EXCHANGE_CONFIGS: Dict[str, ExchangeConfig] = {
         max_requests_per_minute=1200,
         supported_market_types={"spot", "futures", "perpetual"},
         supported_timeframes=[
-            "1min", "5min", "15min", "30min", "1h", "day"
+            "1min", "5min", "15min", "30min", "1h", "1d"
         ],
         requires_api_key=False,
         has_funding_rates=True,
@@ -68,7 +68,7 @@ EXCHANGE_CONFIGS: Dict[str, ExchangeConfig] = {
         max_requests_per_minute=600,
         supported_market_types={"spot", "futures", "perpetual", "option"},
         supported_timeframes=[
-            "1min", "5min", "15min", "30min", "1h", "day"
+            "1min", "5min", "15min", "30min", "1h", "1d"
         ],
         requires_api_key=False,
         has_funding_rates=True,
@@ -228,7 +228,7 @@ def get_optimal_batch_size(exchange_id: str, timeframe: str) -> int:
     # Adjust based on timeframe
     timeframe_multipliers = {
         "1min": 1.0, "5min": 1.0, "15min": 1.2, 
-        "30min": 1.5, "1h": 2.0, "day": 5.0
+        "30min": 1.5, "1h": 2.0, "1d": 5.0
     }
     
     multiplier = timeframe_multipliers.get(timeframe, 1.0)

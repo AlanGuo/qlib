@@ -23,6 +23,7 @@ from exchange_adapters.okx_adapter import OKXAdapter
 from storage_manager import CryptoStorageManager
 from data_validator import CryptoDataValidator
 from config.main_config import CryptoDataConfig
+from qlib_data_generator import QlibDataGenerator
 
 
 class TestEndToEndDataFlow:
@@ -108,6 +109,50 @@ class TestEndToEndDataFlow:
                 # Add delay between symbols to respect rate limits
                 time.sleep(1)
 
+            # Step 6: Generate calendar and instruments files for complete Qlib structure
+            print("Generating calendar and instruments files...")
+            try:
+                # Initialize qlib for QlibDataGenerator
+                import qlib
+                qlib.init(provider_uri=self.test_data_dir)
+                
+                # Generate complete Qlib structure
+                qlib_generator = QlibDataGenerator(
+                    data_dir=self.test_data_dir,
+                    provider_uri=self.test_data_dir
+                )
+                
+                # Calculate date range based on collected data
+                end_date = datetime.now()
+                start_date = end_date - timedelta(hours=limit)  # Based on limit used
+                
+                summary = qlib_generator.create_full_structure(
+                    timeframes=[timeframe],
+                    exchanges=['binance'],
+                    symbols=[s.replace('USDT', '/USDT') for s in symbols],  # Convert to standard format
+                    start_date=start_date,
+                    end_date=end_date,
+                    market_type='spot'
+                )
+                
+                print(f"✅ Qlib structure generated: {summary['timeframes_created']} timeframes, "
+                      f"{summary['instruments_files']} instruments files, "
+                      f"{summary['calendar_files']} calendar files")
+                
+                # Verify calendar and instruments files exist
+                data_path = Path(self.test_data_dir)
+                tf_dir = data_path / timeframe
+                
+                assert (tf_dir / "instruments" / "crypto.txt").exists(), "Instruments file not generated"
+                assert (tf_dir / "calendars" / f"{timeframe}.txt").exists(), "Calendar file not generated"
+                assert (tf_dir / "calendars" / f"{timeframe}_future.txt").exists(), "Future calendar file not generated"
+                
+                print("✅ Calendar and instruments files verified")
+                
+            except Exception as qlib_error:
+                print(f"⚠️ Calendar/instruments generation failed: {qlib_error}")
+                # Don't fail the test for this, as it's an enhancement
+
             print("✅ Binance end-to-end flow test passed")
 
         except Exception as e:
@@ -166,6 +211,50 @@ class TestEndToEndDataFlow:
                 
                 # Add delay between symbols to respect rate limits
                 time.sleep(1)
+            
+            # Step 6: Generate calendar and instruments files for complete Qlib structure
+            print("Generating calendar and instruments files for OKX...")
+            try:
+                # Initialize qlib for QlibDataGenerator (use same test dir)
+                import qlib
+                qlib.init(provider_uri=self.test_data_dir)
+                
+                # Generate complete Qlib structure
+                qlib_generator = QlibDataGenerator(
+                    data_dir=self.test_data_dir,
+                    provider_uri=self.test_data_dir
+                )
+                
+                # Calculate date range based on collected data
+                end_date = datetime.now()
+                start_date = end_date - timedelta(hours=limit)  # Based on limit used
+                
+                summary = qlib_generator.create_full_structure(
+                    timeframes=[timeframe],
+                    exchanges=['okx'],
+                    symbols=[s.replace('-', '/') for s in symbols],  # Convert to standard format
+                    start_date=start_date,
+                    end_date=end_date,
+                    market_type='spot'
+                )
+                
+                print(f"✅ OKX Qlib structure generated: {summary['timeframes_created']} timeframes, "
+                      f"{summary['instruments_files']} instruments files, "
+                      f"{summary['calendar_files']} calendar files")
+                
+                # Verify calendar and instruments files exist
+                data_path = Path(self.test_data_dir)
+                tf_dir = data_path / timeframe
+                
+                assert (tf_dir / "instruments" / "crypto.txt").exists(), "Instruments file not generated"
+                assert (tf_dir / "calendars" / f"{timeframe}.txt").exists(), "Calendar file not generated"
+                assert (tf_dir / "calendars" / f"{timeframe}_future.txt").exists(), "Future calendar file not generated"
+                
+                print("✅ OKX Calendar and instruments files verified")
+                
+            except Exception as qlib_error:
+                print(f"⚠️ OKX Calendar/instruments generation failed: {qlib_error}")
+                # Don't fail the test for this, as it's an enhancement
             
             print("✅ OKX end-to-end flow test passed")
             

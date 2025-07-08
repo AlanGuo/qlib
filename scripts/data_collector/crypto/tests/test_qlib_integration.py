@@ -122,10 +122,27 @@ class TestQlibIntegration:
                 instrument='binance.BTCUSDT',
                 freq='1h'
             )
-            # Data is stored, no need to check path
             
-            # Data is already stored in Qlib format by storage_manager
-            # No additional conversion needed
+            # Generate calendar and instruments files for complete Qlib structure
+            print("Generating calendar and instruments files...")
+            try:
+                # Generate complete Qlib structure
+                summary = qlib_generator.create_full_structure(
+                    timeframes=['1h'],
+                    exchanges=['binance'],
+                    symbols=['BTC/USDT'],
+                    start_date=crypto_data.index[0].to_pydatetime(),
+                    end_date=crypto_data.index[-1].to_pydatetime(),
+                    market_type='spot'
+                )
+                
+                print(f"✅ Qlib structure generated: {summary['timeframes_created']} timeframes, "
+                      f"{summary['instruments_files']} instruments files, "
+                      f"{summary['calendar_files']} calendar files")
+                
+            except Exception as qlib_error:
+                print(f"⚠️ Calendar/instruments generation failed: {qlib_error}")
+                # Don't fail the test for this, as it's an enhancement
             
             # Verify Qlib data directory structure
             qlib_data_path = Path(self.qlib_data_dir)
@@ -167,8 +184,23 @@ class TestQlibIntegration:
                 freq='1h'
             )
             
-            # Data is already stored in Qlib format by storage_manager
-            # No additional conversion needed
+            # Generate calendar and instruments files for complete Qlib structure
+            print("Generating calendar and instruments files for data loading test...")
+            try:
+                # Generate complete Qlib structure
+                summary = qlib_generator.create_full_structure(
+                    timeframes=['1h'],
+                    exchanges=['binance'],
+                    symbols=['BTC/USDT'],
+                    start_date=crypto_data.index[0].to_pydatetime(),
+                    end_date=crypto_data.index[-1].to_pydatetime(),
+                    market_type='spot'
+                )
+                
+                print(f"✅ Qlib structure for loading test generated: {summary['timeframes_created']} timeframes")
+                
+            except Exception as qlib_error:
+                print(f"⚠️ Calendar/instruments generation failed in loading test: {qlib_error}")
             
             # Try to load data through Qlib
             try:

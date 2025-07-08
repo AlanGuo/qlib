@@ -167,17 +167,8 @@ class BinanceAdapter(ExchangeAdapter):
         self._rate_limit_wait()
         
         try:
-            # Map qlib timeframe to CCXT format
-            timeframe_map = {
-                'day': '1d',
-                '1h': '1h',
-                '1min': '1m',
-                '5min': '5m',
-                '15min': '15m',
-                '30min': '30m'
-            }
-            
-            ccxt_timeframe = timeframe_map.get(timeframe, timeframe)
+            # Use centralized timeframe conversion instead of hardcoded mapping
+            ccxt_timeframe = get_exchange_timeframe('binance', timeframe)
             
             # Validate against CCXT supported timeframes
             if ccxt_timeframe not in self.exchange.timeframes:

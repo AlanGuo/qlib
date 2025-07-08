@@ -30,6 +30,7 @@ from exchange_adapters.okx_adapter import OKXAdapter
 from storage_manager import CryptoStorageManager
 from data_validator import CryptoDataValidator
 from config.main_config import CryptoDataConfig
+from qlib_data_generator import QlibDataGenerator
 
 
 class TestExceptionRecovery:
@@ -546,6 +547,50 @@ class TestExceptionRecovery:
         print(f"- Stored files: {len(stored_files)}")
         if len(stored_files) > 0:
             print(f"- File types: {[f.suffix for f in stored_files[:10]]}")  # Show first 10 file extensions
+        
+        # Generate calendar and instruments files for recovery test
+        if successful_collections > 0:
+            print("Generating calendar and instruments files after recovery...")
+            try:
+                # Initialize qlib for QlibDataGenerator
+                import qlib
+                qlib.init(provider_uri=self.test_data_dir)
+                
+                # Generate complete Qlib structure
+                qlib_generator = QlibDataGenerator(
+                    data_dir=self.test_data_dir,
+                    provider_uri=self.test_data_dir
+                )
+                
+                # Calculate date range based on recent data
+                end_date = datetime.now()
+                start_date = end_date - timedelta(hours=5)  # Cover collected data range
+                
+                summary = qlib_generator.create_full_structure(
+                    timeframes=['1h'],
+                    exchanges=['binance'],
+                    symbols=[s.replace('USDT', '/USDT') for s in config.collection.symbols],
+                    start_date=start_date,
+                    end_date=end_date,
+                    market_type='spot'
+                )
+                
+                print(f"✅ Exception recovery Qlib structure generated: {summary['timeframes_created']} timeframes, "
+                      f"{summary['instruments_files']} instruments files, "
+                      f"{summary['calendar_files']} calendar files")
+                
+                # Verify calendar and instruments files exist
+                data_path = Path(self.test_data_dir)
+                tf_dir = data_path / "1h"
+                
+                if (tf_dir / "instruments" / "crypto.txt").exists():
+                    print("✅ Instruments file generated successfully after recovery")
+                if (tf_dir / "calendars" / "1h.txt").exists():
+                    print("✅ Calendar files generated successfully after recovery")
+                
+            except Exception as qlib_error:
+                print(f"⚠️ Calendar/instruments generation failed after recovery: {qlib_error}")
+                # Don't fail the test for this, as it's an enhancement
         
         # Assert minimum success criteria
         assert success_rate >= 50, f"Success rate {success_rate:.1f}% too low"

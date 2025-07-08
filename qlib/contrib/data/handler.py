@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 from qlib.contrib.data.loader import Alpha158DL, Alpha360DL
+from qlib.contrib.data.crypto_loader import CryptoAlphaDL, CryptoAlpha158DL
 from ...data.dataset.handler import DataHandlerLP
 from ...data.dataset.processor import Processor
 from ...utils import get_callable_kwargs
@@ -155,3 +156,104 @@ class Alpha158(DataHandlerLP):
 class Alpha158vwap(Alpha158):
     def get_label_config(self):
         return ["Ref($vwap, -2)/Ref($vwap, -1) - 1"], ["LABEL0"]
+
+
+class CryptoAlpha(DataHandlerLP):
+    """
+    Crypto Alpha factor handler for cryptocurrency data.
+    
+    Designed specifically for crypto markets with:
+    - 24/7 trading considerations
+    - Higher volatility factors
+    - Crypto-specific technical indicators
+    - Multi-timeframe analysis
+    """
+
+    def __init__(
+        self,
+        instruments="crypto_universe",  # Default crypto universe
+        start_time=None,
+        end_time=None,
+        freq="1h",  # Hourly frequency for crypto
+        infer_processors=None,
+        learn_processors=None,
+        fit_start_time=None,
+        fit_end_time=None,
+        filter_pipe=None,
+        inst_processors=None,
+        factor_config=None,
+        **kwargs,
+    ):
+        # Default processors for crypto data
+        if infer_processors is None:
+            infer_processors = [
+                {"class": "ProcessInf", "kwargs": {}},
+                {"class": "ZScoreNorm", "kwargs": {}},
+                {"class": "Fillna", "kwargs": {}},
+            ]
+        
+        if learn_processors is None:
+            learn_processors = [
+                {"class": "DropnaLabel"},
+                {"class": "CSZScoreNorm", "kwargs": {"fields_group": "label"}},
+            ]
+
+        infer_processors = check_transform_proc(infer_processors, fit_start_time, fit_end_time)
+        learn_processors = check_transform_proc(learn_processors, fit_start_time, fit_end_time)
+
+        # Configure factor groups
+        if factor_config is None:
+            factor_config = {
+                "basic": {},
+                "decline": {},
+                "volume": {},
+                "momentum": {},
+                # "funding": {},  # Enable when funding data available
+            }
+
+        data_loader = {
+            "class": "QlibDataLoader",
+            "kwargs": {
+                "config": {
+                    "feature": CryptoAlphaDL.get_feature_config(factor_config),
+                    "label": kwargs.pop("label", self.get_label_config()),
+                },
+                "filter_pipe": filter_pipe,
+                "freq": freq,
+                "inst_processors": inst_processors,
+            },
+        }
+
+        super().__init__(
+            instruments=instruments,
+            start_time=start_time,
+            end_time=end_time,
+            data_loader=data_loader,
+            infer_processors=infer_processors,
+            learn_processors=learn_processors,
+            **kwargs,
+        )
+
+    def get_label_config(self):
+        """
+        Default label configuration for crypto prediction.
+        Predicts next hour return.
+        """
+        return ["Ref($close, -1)/$close - 1"], ["LABEL0"]
+
+
+class CryptoAlpha158(CryptoAlpha):
+    """
+    Simplified CryptoAlpha handler with Alpha158-like configuration.
+    Uses all available factor groups for comprehensive analysis.
+    """
+
+    def __init__(self, **kwargs):
+        # Full factor configuration
+        factor_config = {
+            "basic": {},
+            "decline": {},
+            "volume": {},
+            "momentum": {},
+        }
+        super().__init__(factor_config=factor_config, **kwargs)

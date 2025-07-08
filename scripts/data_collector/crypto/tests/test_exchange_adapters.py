@@ -304,6 +304,17 @@ class TestPerpetualContractMockData:
         mock_exchange = MagicMock()
         mock_exchange.load_markets.return_value = mock_perpetual_markets
         mock_exchange.markets = mock_perpetual_markets
+        
+        # 添加timeframes支持
+        mock_exchange.timeframes = {
+            '1m': '1 minute',
+            '5m': '5 minutes', 
+            '15m': '15 minutes',
+            '30m': '30 minutes',
+            '1h': '1 hour',
+            '1d': '1 day',
+            '1w': '1 week'
+        }
 
         # 模拟资金费率数据
         mock_exchange.fetch_funding_rate.return_value = {
