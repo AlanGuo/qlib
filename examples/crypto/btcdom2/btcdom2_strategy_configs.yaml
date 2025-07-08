@@ -1,0 +1,177 @@
+# BTC Dominance Strategy (BtcDom2) Configuration Templates
+
+# Template 1: Conservative Strategy
+# - Low frequency rebalancing
+# - Higher BTC allocation for stability
+# - Equal weight allocation to reduce complexity
+conservative_strategy:
+  class_name: "qlib.contrib.strategy.btcdom2_strategy.BtcDom2Strategy"
+  config:
+    rebalance_frequency: "1d"
+    factor_lookback_days: 21
+    num_short_positions: 5
+    btc_spot_ratio: 0.7
+    short_pool_ratio: 0.3
+    weighting_scheme: "equal_weight"
+    factor_categories: ["decline", "volume", "momentum"]
+    min_daily_volume: 2000000  # $2M minimum daily volume
+    max_position_size: 0.3
+    stop_loss_threshold: 0.20  # Conservative stop loss
+    portfolio_stop_loss: 0.15  # Conservative portfolio stop loss
+    max_drawdown_threshold: 0.25  # Higher drawdown tolerance
+    factor_weights:
+      decline: 0.4
+      volume: 0.3
+      momentum: 0.3
+
+# Template 2: Aggressive Strategy  
+# - High frequency rebalancing
+# - Lower BTC allocation for higher returns
+# - Factor-weighted allocation
+# - Includes funding rate factors
+aggressive_strategy:
+  class_name: "qlib.contrib.strategy.btcdom2_strategy.BtcDom2Strategy"
+  config:
+    rebalance_frequency: "4h"
+    factor_lookback_days: 14
+    num_short_positions: 15
+    btc_spot_ratio: 0.3
+    short_pool_ratio: 0.7
+    weighting_scheme: "factor_weighted"
+    factor_categories: ["decline", "volume", "momentum", "funding"]
+    min_daily_volume: 5000000  # $5M minimum daily volume
+    max_position_size: 0.1
+    stop_loss_threshold: 0.12  # Aggressive stop loss
+    portfolio_stop_loss: 0.08  # Aggressive portfolio stop loss
+    max_drawdown_threshold: 0.15  # Lower drawdown tolerance
+    factor_weights:
+      decline: 0.35
+      volume: 0.25
+      momentum: 0.25
+      funding: 0.15
+
+# Template 3: Balanced Strategy
+# - Medium frequency rebalancing  
+# - Balanced BTC allocation
+# - Volatility-weighted allocation for risk management
+balanced_strategy:
+  class_name: "qlib.contrib.strategy.btcdom2_strategy.BtcDom2Strategy"
+  config:
+    rebalance_frequency: "8h"
+    factor_lookback_days: 14
+    num_short_positions: 10
+    btc_spot_ratio: 0.5
+    short_pool_ratio: 0.5
+    weighting_scheme: "volatility_weighted"
+    factor_categories: ["decline", "volume", "momentum", "funding"]
+    min_daily_volume: 3000000  # $3M minimum daily volume
+    max_position_size: 0.15
+    stop_loss_threshold: 0.15  # Balanced stop loss
+    portfolio_stop_loss: 0.10  # Balanced portfolio stop loss
+    max_drawdown_threshold: 0.20  # Balanced drawdown tolerance
+    factor_weights:
+      decline: 0.3
+      volume: 0.25
+      momentum: 0.25
+      funding: 0.2
+
+# Template 4: Research Strategy
+# - Higher diversification for research purposes
+# - All factor categories included
+# - Research-oriented parameters
+research_strategy:
+  class_name: "qlib.contrib.strategy.btcdom2_strategy.BtcDom2Strategy"
+  config:
+    rebalance_frequency: "12h"
+    factor_lookback_days: 30
+    num_short_positions: 20
+    btc_spot_ratio: 0.4
+    short_pool_ratio: 0.6
+    weighting_scheme: "factor_weighted"
+    factor_categories: ["basic", "decline", "volume", "momentum", "funding"]
+    min_daily_volume: 1000000  # $1M minimum daily volume
+    max_position_size: 0.08  # Lower concentration
+    stop_loss_threshold: 0.18
+    portfolio_stop_loss: 0.12
+    max_drawdown_threshold: 0.22
+    factor_weights:
+      basic: 0.1
+      decline: 0.25
+      volume: 0.2
+      momentum: 0.25
+      funding: 0.2
+
+# Template 5: High-Frequency Strategy
+# - Very high frequency rebalancing
+# - Short-term factors focus
+# - Strict liquidity requirements
+high_frequency_strategy:
+  class_name: "qlib.contrib.strategy.btcdom2_strategy.BtcDom2Strategy"
+  config:
+    rebalance_frequency: "4h"
+    factor_lookback_days: 7
+    num_short_positions: 8
+    btc_spot_ratio: 0.5
+    short_pool_ratio: 0.5
+    weighting_scheme: "factor_weighted"
+    factor_categories: ["decline", "volume", "momentum"]
+    min_daily_volume: 10000000  # $10M minimum daily volume
+    max_position_size: 0.2
+    max_spread_estimate: 1.0  # Stricter spread requirement
+    stop_loss_threshold: 0.10
+    portfolio_stop_loss: 0.06
+    max_drawdown_threshold: 0.12
+    factor_weights:
+      decline: 0.4
+      volume: 0.35
+      momentum: 0.25
+
+# Template 6: Risk-Managed Strategy
+# - Conservative position sizing
+# - Multiple risk controls
+# - Risk parity weighting
+risk_managed_strategy:
+  class_name: "qlib.contrib.strategy.btcdom2_strategy.BtcDom2Strategy"
+  config:
+    rebalance_frequency: "8h"
+    factor_lookback_days: 21
+    num_short_positions: 8
+    btc_spot_ratio: 0.6
+    short_pool_ratio: 0.4
+    weighting_scheme: "risk_parity"
+    factor_categories: ["decline", "volume", "momentum", "funding"]
+    min_daily_volume: 3000000  # $3M minimum daily volume
+    max_position_size: 0.12
+    position_concentration_limit: 0.15  # Lower concentration limit
+    correlation_limit: 0.6  # Stricter correlation limit
+    stop_loss_threshold: 0.12
+    portfolio_stop_loss: 0.08
+    max_drawdown_threshold: 0.15
+    factor_weights:
+      decline: 0.25
+      volume: 0.25
+      momentum: 0.25
+      funding: 0.25
+
+# Template 7: BTC Dominance Focus Strategy
+# - Higher BTC allocation focusing on dominance
+# - Optimized for BTC dominance periods
+btc_dominance_focus:
+  class_name: "qlib.contrib.strategy.btcdom2_strategy.BtcDom2Strategy"
+  config:
+    rebalance_frequency: "8h"
+    factor_lookback_days: 14
+    num_short_positions: 12
+    btc_spot_ratio: 0.65  # Higher BTC allocation
+    short_pool_ratio: 0.35
+    weighting_scheme: "factor_weighted"
+    factor_categories: ["decline", "momentum", "funding"]
+    min_daily_volume: 4000000  # $4M minimum daily volume
+    max_position_size: 0.12
+    stop_loss_threshold: 0.15
+    portfolio_stop_loss: 0.10
+    max_drawdown_threshold: 0.18
+    factor_weights:
+      decline: 0.4  # Higher focus on decline
+      momentum: 0.35
+      funding: 0.25

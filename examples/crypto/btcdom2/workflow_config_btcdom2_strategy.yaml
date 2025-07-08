@@ -1,0 +1,94 @@
+# BTC Dominance Strategy (BtcDom2) Workflow Configuration for Qlib
+
+qlib_init:
+    provider_uri: "~/.qlib/qlib_data/crypto_data"
+    region: crypto
+
+market: &market "crypto"
+benchmark: &benchmark "SH000905"
+
+data_handler_config: &data_handler_config
+    start_time: 2024-01-01
+    end_time: 2024-12-31
+    fit_start_time: 2024-01-01
+    fit_end_time: 2024-10-31
+    instruments: "crypto"
+    infer_processors:
+        - class: RobustZScoreNorm
+          kwargs:
+              fields_group: features
+              clip_outlier: true
+        - class: Fillna
+          kwargs:
+              fields_group: features
+
+port_analysis_config: &port_analysis_config
+    strategy:
+        class: BtcDom2Strategy
+        module_path: qlib.contrib.strategy.btcdom2_strategy
+        kwargs:
+            signal: <MODEL>
+            topk: 50
+            n_drop: 5
+    backtest:
+        start_time: 2024-01-01
+        end_time: 2024-12-31
+        account: 100000
+        benchmark: *benchmark
+        exchange_kwargs:
+            limit_threshold: 0.095
+            deal_price: close
+            open_cost: 0.0005
+            close_cost: 0.0015
+            min_cost: 5
+
+task:
+    model:
+        class: BtcDom2Strategy
+        module_path: qlib.contrib.strategy.btcdom2_strategy
+        kwargs:
+            # Strategy configuration
+            rebalance_frequency: "8h"
+            factor_lookback_days: 14
+            num_short_positions: 10
+            btc_spot_ratio: 0.5
+            short_pool_ratio: 0.5
+            weighting_scheme: "factor_weighted"
+            factor_categories: ["decline", "volume", "momentum", "funding"]
+            min_daily_volume: 3000000
+            max_position_size: 0.15
+            stop_loss_threshold: 0.15
+            portfolio_stop_loss: 0.10
+            max_drawdown_threshold: 0.20
+            factor_weights:
+                decline: 0.3
+                volume: 0.25
+                momentum: 0.25
+                funding: 0.2
+    
+    dataset:
+        class: DatasetH
+        module_path: qlib.data.dataset
+        kwargs:
+            handler:
+                class: CryptoFactorDL
+                module_path: qlib.contrib.data.crypto_loader
+                kwargs: *data_handler_config
+            segments:
+                train: [2024-01-01, 2024-08-31]
+                valid: [2024-09-01, 2024-10-31] 
+                test: [2024-11-01, 2024-12-31]
+                
+    record: 
+        - class: SignalRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: {}
+        - class: SigAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            ana_long_short: False
+            ann_scaler: 252
+        - class: PortAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: 
+            config: *port_analysis_config

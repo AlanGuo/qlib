@@ -137,9 +137,9 @@ class QlibDataGenerator:
             'feature_directories': 0
         }
         
-        # Create timeframe directory using qlib format for consistency
-        qlib_timeframe = convert_to_qlib_freq(timeframe)
-        tf_dir = self.data_dir / qlib_timeframe
+        # Create timeframe directory using original timeframe name
+        # This maintains consistency with data collection expectations
+        tf_dir = self.data_dir / timeframe
         tf_dir.mkdir(exist_ok=True)
         
         # Create subdirectories
@@ -152,11 +152,11 @@ class QlibDataGenerator:
         
         # Create instruments file
         instruments = self._generate_instruments_list(exchanges, symbols, market_type)
-        self._create_instruments_file(instruments, "crypto", qlib_timeframe)
+        self._create_instruments_file(instruments, "crypto", timeframe)
         summary['instruments_files'] = 1
         
         # Create calendar files
-        self._create_calendar_files(qlib_timeframe, start_date, end_date)
+        self._create_calendar_files(timeframe, start_date, end_date)
         summary['calendar_files'] = 2  # Regular and future calendars
         
         # Create feature directories for each instrument
@@ -187,11 +187,9 @@ class QlibDataGenerator:
                                 freq: str) -> None:
         """Create instruments file for a market and frequency."""
         try:
-            # Convert to qlib frequency format
-            qlib_freq = convert_to_qlib_freq(freq)
-
-            # Use data_dir as base path and ensure correct structure with qlib format
-            tf_dir = self.data_dir / qlib_freq
+            # Use original frequency for directory structure
+            # This maintains consistency with data collection expectations
+            tf_dir = self.data_dir / freq
             instruments_dir = tf_dir / "instruments"
             instruments_dir.mkdir(parents=True, exist_ok=True)
 
@@ -229,11 +227,11 @@ class QlibDataGenerator:
                                future: bool = False) -> None:
         """Create a single calendar file."""
         try:
-            # Convert to qlib frequency format
+            # Convert to qlib frequency format for internal qlib operations
             qlib_freq = convert_to_qlib_freq(freq)
 
-            # Use data_dir as base path and ensure correct structure with qlib format
-            tf_dir = self.data_dir / qlib_freq
+            # Use original timeframe for directory structure (maintains consistency with data collection)
+            tf_dir = self.data_dir / freq
             calendars_dir = tf_dir / "calendars"
             calendars_dir.mkdir(parents=True, exist_ok=True)
 
@@ -285,11 +283,11 @@ class QlibDataGenerator:
                     calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
                     self.logger.warning(f"Unknown frequency {qlib_freq}, using daily calendar")
             
-            # Create calendar file name using qlib format
+            # Create calendar file name using original timeframe format (for user consistency)
             if future:
-                calendar_file = calendars_dir / f"{qlib_freq}_future.txt"
+                calendar_file = calendars_dir / f"{freq}_future.txt"
             else:
-                calendar_file = calendars_dir / f"{qlib_freq}.txt"
+                calendar_file = calendars_dir / f"{freq}.txt"
             
             # Write calendar file directly
             with open(calendar_file, 'w') as f:
@@ -348,9 +346,8 @@ class QlibDataGenerator:
                 # Write updated data
                 storage._write_instrument(updated_data)
                 
-                # Create feature directories for new instruments using qlib format
-                qlib_timeframe = convert_to_qlib_freq(timeframe)
-                features_dir = self.data_dir / qlib_timeframe / "features"
+                # Create feature directories for new instruments using original timeframe format
+                features_dir = self.data_dir / timeframe / "features"
                 for instrument in new_instruments:
                     if instrument not in existing_instruments:
                         instrument_dir = features_dir / instrument
@@ -423,7 +420,7 @@ class QlibDataGenerator:
                 validation['missing_files'].append(f"{timeframe}/instruments/crypto.txt")
                 validation['is_valid'] = False
             
-            # Check for calendar files
+            # Check for calendar files using original timeframe format
             calendar_file = calendars_dir / f"{timeframe}.txt"
             future_calendar_file = calendars_dir / f"{timeframe}_future.txt"
             

@@ -6,7 +6,7 @@ A comprehensive cryptocurrency data collection module for the Qlib quantitative 
 
 ```
 scripts/data_collector/crypto/
-├── README.md                    # This file
+├── readme.md                    # This file
 ├── __init__.py                  # Package initialization
 ├── __main__.py                  # CLI entry point
 ├── cli.py                       # Command-line interface
@@ -80,9 +80,9 @@ scripts/data_collector/crypto/
 │   ├── validation_example.py
 │   └── storage_debug_example.py # Storage debugging example
 └── docs/                        # Documentation
-    ├── CLI_README.md            # CLI documentation
+    ├── CLI_readme.md            # CLI documentation
     ├── INCREMENTAL_UPDATE_INTEGRATION.md
-    └── incremental_README.md    # Incremental update docs
+    └── incremental_readme.md    # Incremental update docs
 ```
 
 ## Quick Start
@@ -133,9 +133,9 @@ Check the `examples/` directory for detailed usage examples:
 
 See the `docs/` directory for detailed documentation:
 
-- `CLI_README.md` - Command-line interface guide
+- `CLI_readme.md` - Command-line interface guide
 - `INCREMENTAL_UPDATE_INTEGRATION.md` - Incremental update system
-- `incremental_README.md` - Incremental update details
+- `incremental_readme.md` - Incremental update details
 
 ## Features
 

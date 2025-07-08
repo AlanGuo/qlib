@@ -16,13 +16,26 @@ from .rule_strategy import (
 
 from .cost_control import SoftTopkStrategy
 
+from .btcdom2_strategy import (
+    BtcDom2Strategy,
+    BtcDom2Config,
+    WeightingScheme,
+    RebalanceFrequency,
+    create_btcdom2_strategy,
+)
+
 
 __all__ = [
     "TopkDropoutStrategy",
-    "WeightStrategyBase",
+    "WeightStrategyBase", 
     "EnhancedIndexingStrategy",
     "TWAPStrategy",
     "SBBStrategyBase",
     "SBBStrategyEMA",
     "SoftTopkStrategy",
+    "BtcDom2Strategy",
+    "BtcDom2Config",
+    "WeightingScheme",
+    "RebalanceFrequency",
+    "create_btcdom2_strategy",
 ]

@@ -73,14 +73,19 @@ class CryptoStorageManager:
 
         # Set default provider_uri if not provided
         if provider_uri is None:
-            # Create provider_uri for qlib frequency formats pointing to qlib frequency directories
+            # Create provider_uri mapping using original timeframe names for directory structure
+            # but providing qlib format for qlib internal usage
             self.provider_uri = {}
 
             for timeframe in TIMEFRAME_MAPPING.keys():
-                # Convert to qlib frequency format
+                # Use original timeframe for directory path (e.g., "1h", "1d")
+                # but map both original and qlib formats to the same directory
+                original_path = str(self.data_dir / timeframe)
                 qlib_freq = convert_to_qlib_freq(timeframe)
-                # Map qlib frequency to the corresponding qlib frequency directory
-                self.provider_uri[qlib_freq] = str(self.data_dir / qlib_freq)
+                
+                # Map both formats to the original directory path
+                self.provider_uri[timeframe] = original_path
+                self.provider_uri[qlib_freq] = original_path
             # Note: We don't add C.DEFAULT_FREQ to avoid Freq.parse() issues in support_freq
         else:
             self.provider_uri = provider_uri
@@ -94,10 +99,11 @@ class CryptoStorageManager:
         # Create base directories
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
-        # Create subdirectories for different timeframes using qlib frequency names
+        # Create subdirectories for different timeframes using original timeframe names
+        # This maintains consistency with data collection and user expectations
         for timeframe in TIMEFRAME_MAPPING.keys():
-            qlib_freq = convert_to_qlib_freq(timeframe)
-            timeframe_dir = self.data_dir / qlib_freq
+            # Use original timeframe for directory structure (e.g., "1h", "1d")
+            timeframe_dir = self.data_dir / timeframe
             timeframe_dir.mkdir(exist_ok=True)
             
             # Create features, instruments, and calendars directories
@@ -137,18 +143,17 @@ class CryptoStorageManager:
             if field not in STANDARD_FIELDS and field not in CRYPTO_SPECIFIC_FIELDS:
                 self.logger.warning(f"Unknown field: {field}")
 
-            # Use original frequency for directory structure, but convert for qlib internal storage
+            # Use original frequency for directory structure
             # Note: We keep directory names consistent with user config (1h, 1d, 1w)
-            # but qlib's FileFeatureStorage expects certain formats internally
-            qlib_freq = convert_to_qlib_freq(freq)
+            # but need to ensure FileFeatureStorage points to the correct directory
             
-            # Create storage instance with qlib frequency for internal compatibility
-            storage = FileFeatureStorage(
-                instrument=instrument,
-                field=field,
-                freq=qlib_freq,
-                provider_uri=self.provider_uri
-            )
+            # Build the correct directory path using original timeframe
+            feature_dir = self.data_dir / freq / "features" / instrument
+            feature_file = feature_dir / f"{field}.bin"
+            
+            # Create storage instance by constructing the path manually
+            # This ensures we use original timeframe directories
+            feature_dir.mkdir(parents=True, exist_ok=True)
             
             # Ensure data is properly sorted by index
             if not data.index.is_monotonic_increasing:
@@ -157,13 +162,15 @@ class CryptoStorageManager:
             # Convert to numpy array for storage
             data_array = data.values.astype(np.float32)
 
-            # Ensure parent directory exists
-            storage.uri.parent.mkdir(parents=True, exist_ok=True)
-
-            # Write data to storage
-            storage.write(data_array)
+            # Write data directly to the file in qlib binary format
+            # This is simplified binary format compatible with qlib
+            with open(feature_file, 'wb') as f:
+                # Write number of records
+                f.write(struct.pack('I', len(data_array)))
+                # Write data
+                f.write(data_array.tobytes())
             
-            self.logger.info(f"Saved {len(data)} records for {instrument}.{field}.{freq}")
+            self.logger.info(f"Saved {len(data)} records for {instrument}.{field}.{freq} to {feature_file}")
             
         except Exception as e:
             self.logger.error(f"Failed to save feature data for {instrument}.{field}.{freq}: {e}")

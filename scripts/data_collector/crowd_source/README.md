@@ -29,4 +29,4 @@ docker run -v /<some output directory>:/output -it --rm chenditc/investment_data
 ```
 
 ## FAQ and other info
-See: https://github.com/chenditc/investment_data/blob/main/README.md
+See: https://github.com/chenditc/investment_data/blob/main/readme.md

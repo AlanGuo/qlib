@@ -15,7 +15,7 @@ BENCH_DIR = DIRNAME.parent / "baseline"
 
 
 class DDGDABench(DDGDA):
-    # The config in the README.md
+    # The config in the readme.md
     CONF_LIST = [
         BENCH_DIR / "workflow_config_linear_Alpha158.yaml",
         BENCH_DIR / "workflow_config_lightgbm_Alpha158.yaml",

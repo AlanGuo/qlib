@@ -52,7 +52,7 @@ EXCHANGE_TIMEFRAME_MAPPING: Dict[str, Dict[str, str]] = {
         "5min": "5m",
         "15min": "15m",
         "30min": "30m",
-        "1h": "1H",
+        "1h": "1h",  # OKX uses lowercase 'h' for hours
         "1d": "1D",
         "1w": "1W",
         # Legacy support

@@ -35,7 +35,7 @@ Scripts for data collection
      class Run(BaseRun):
          ...
      ```
-3. add `README.md`
+3. add `readme.md`
 4. add `requirements.txt`
 
 

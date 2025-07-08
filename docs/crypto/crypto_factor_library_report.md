@@ -139,7 +139,7 @@ print(f"平均绝对IC: {validation_results['ic_analysis']['mean_abs_ic']}")
 
 ### 集成文件
 - `/qlib/contrib/data/crypto_factors.py` - 统一因子接口（已有）
-- `/scripts/data_collector/crypto/docs/CRYPTO_FACTORS_INTEGRATION_GUIDE.md` - 集成文档
+- `/scripts/data_collector/crypto/docs/crypto_factors_integration_guide.md` - 集成文档
 
 ## ✨ 后续优化方向
 

@@ -42,7 +42,7 @@ export HTTPS_PROXY=http://127.0.0.1:10808
 
 ```
 scripts/data_collector/crypto/tests/
-├── README.md                          # 测试规范说明
+├── readme.md                          # 测试规范说明
 ├── conftest.py                        # pytest配置和fixtures
 ├── test_crypto_alpha_factors.py       # CryptoAlpha因子测试
 ├── test_decline_factors.py            # 跌幅因子单元测试

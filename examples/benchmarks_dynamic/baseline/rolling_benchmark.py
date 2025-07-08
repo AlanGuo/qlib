@@ -14,7 +14,7 @@ DIRNAME = Path(__file__).absolute().resolve().parent
 
 
 class RollingBenchmark(Rolling):
-    # The config in the README.md
+    # The config in the readme.md
     CONF_LIST = [DIRNAME / "workflow_config_linear_Alpha158.yaml", DIRNAME / "workflow_config_lightgbm_Alpha158.yaml"]
 
     DEFAULT_CONF = CONF_LIST[0]
