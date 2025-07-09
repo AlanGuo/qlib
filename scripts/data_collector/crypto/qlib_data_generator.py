@@ -243,7 +243,7 @@ class QlibDataGenerator:
                 calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
             elif freq == "1h":
                 aligned_start = start_date.replace(minute=0, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='H')
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='h')
             elif freq == "5min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 5) * 5, second=0, microsecond=0)
                 calendar = pd.date_range(start=aligned_start, end=end_date, freq='5T')
