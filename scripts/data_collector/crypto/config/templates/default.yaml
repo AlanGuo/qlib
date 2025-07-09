@@ -9,8 +9,9 @@ collection:
   # Symbols to collect (empty list means auto-discover)
   symbols: []
   
-  # Timeframes to collect - using unified qlib format
+  # Timeframes to collect - using unified format (following Qlib project patterns)
   timeframes:
+    - 1h
     - 1d
   
   # Fields to collect

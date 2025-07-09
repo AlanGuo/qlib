@@ -298,30 +298,29 @@ class TestStorageManagerUtilityFunctions:
     """Test utility functions in storage manager module."""
     
     def test_convert_to_qlib_freq_function(self):
-        """Test the convert_to_qlib_freq utility function."""
-        from storage_manager import convert_to_qlib_freq
+        """Test the convert_for_qlib_internal utility function."""
+        from config.timeframes import convert_for_qlib_internal
         
         # Test common timeframe conversions to qlib-compatible format
-        assert convert_to_qlib_freq("1min") == "1min"
-        assert convert_to_qlib_freq("5min") == "5min"
-        assert convert_to_qlib_freq("1h") == "60min"    # qlib expects minutes format
-        assert convert_to_qlib_freq("1d") == "1d"       # qlib d format
-        assert convert_to_qlib_freq("1w") == "1w"       # qlib w format
-        assert convert_to_qlib_freq("day") == "1d"      # Legacy conversion to qlib format
+        assert convert_for_qlib_internal("1min") == "1min"
+        assert convert_for_qlib_internal("5min") == "5min"
+        assert convert_for_qlib_internal("1h") == "60min"    # qlib expects minutes format
+        assert convert_for_qlib_internal("1d") == "1d"       # qlib d format
+        assert convert_for_qlib_internal("1w") == "1w"       # qlib w format
         
         # Test unknown timeframe (should return as-is)
-        assert convert_to_qlib_freq("unknown") == "unknown"
+        assert convert_for_qlib_internal("unknown") == "unknown"
     
     def test_timeframe_conversion_edge_cases(self):
         """Test edge cases in timeframe conversion."""
-        from storage_manager import convert_to_qlib_freq
+        from config.timeframes import convert_for_qlib_internal
         
         # Test empty string
-        assert convert_to_qlib_freq("") == ""
+        assert convert_for_qlib_internal("") == ""
         
         # Test None (should handle gracefully)
         try:
-            result = convert_to_qlib_freq(None)
+            result = convert_for_qlib_internal(None)
             # If it doesn't raise an exception, that's fine
         except (TypeError, AttributeError):
             # If it raises an exception, that's also acceptable
@@ -329,14 +328,14 @@ class TestStorageManagerUtilityFunctions:
     
     def test_complex_timeframe_conversions(self):
         """Test complex timeframe conversions."""
-        from storage_manager import convert_to_qlib_freq
+        from config.timeframes import convert_for_qlib_internal
         
         # Test our supported standard timeframes
-        assert convert_to_qlib_freq("15min") == "15min"
-        assert convert_to_qlib_freq("30min") == "30min"
+        assert convert_for_qlib_internal("15min") == "15min"
+        assert convert_for_qlib_internal("30min") == "30min"
         
         # Test unsupported formats return as-is
-        result = convert_to_qlib_freq("4h")
+        result = convert_for_qlib_internal("4h")
         assert isinstance(result, str)  # Should return as-is
         assert result == "4h"
 

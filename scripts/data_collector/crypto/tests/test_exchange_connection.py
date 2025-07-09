@@ -139,6 +139,9 @@ class TestExchangeConnection:
         """Test fetching OHLCV data from OKX."""
         print("Testing OKX OHLCV data fetch...")
         
+        # IMPORTANT: OKX uses lowercase timeframes (1h, 1d, 1w), NOT uppercase!
+        # This is a common source of confusion - do not change to uppercase
+        
         try:
             adapter = OKXAdapter()
             

@@ -26,7 +26,7 @@ from qlib.utils import get_module_logger
 import qlib
 
 from config.fields import STANDARD_FIELDS, CRYPTO_SPECIFIC_FIELDS
-from config.timeframes import TIMEFRAME_MAPPING, validate_timeframe, convert_to_qlib_freq
+from config.timeframes import TIMEFRAME_MAPPING, validate_timeframe, convert_for_qlib_internal
 
 
 class CryptoStorageManager:
@@ -73,20 +73,12 @@ class CryptoStorageManager:
 
         # Set default provider_uri if not provided
         if provider_uri is None:
-            # Create provider_uri mapping using original timeframe names for directory structure
-            # but providing qlib format for qlib internal usage
+            # Use simple mapping: timeframe -> directory path
+            # This follows the pattern used in other data collectors
             self.provider_uri = {}
-
             for timeframe in TIMEFRAME_MAPPING.keys():
-                # Use original timeframe for directory path (e.g., "1h", "1d")
-                # but map both original and qlib formats to the same directory
-                original_path = str(self.data_dir / timeframe)
-                qlib_freq = convert_to_qlib_freq(timeframe)
-                
-                # Map both formats to the original directory path
-                self.provider_uri[timeframe] = original_path
-                self.provider_uri[qlib_freq] = original_path
-            # Note: We don't add C.DEFAULT_FREQ to avoid Freq.parse() issues in support_freq
+                # Use timeframe directly as directory name (e.g., "1h", "1d")
+                self.provider_uri[timeframe] = str(self.data_dir / timeframe)
         else:
             self.provider_uri = provider_uri
         self.logger = get_module_logger("CryptoStorageManager")
@@ -99,17 +91,17 @@ class CryptoStorageManager:
         # Create base directories
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
-        # Create subdirectories for different timeframes using original timeframe names
-        # This maintains consistency with data collection and user expectations
+        # Create timeframe directories using standard naming (like other collectors)
         for timeframe in TIMEFRAME_MAPPING.keys():
-            # Use original timeframe for directory structure (e.g., "1h", "1d")
             timeframe_dir = self.data_dir / timeframe
             timeframe_dir.mkdir(exist_ok=True)
             
-            # Create features, instruments, and calendars directories
+            # Create subdirectories
             (timeframe_dir / "features").mkdir(exist_ok=True)
             (timeframe_dir / "instruments").mkdir(exist_ok=True)
             (timeframe_dir / "calendars").mkdir(exist_ok=True)
+        
+
         
         self.logger.info(f"Created Qlib directory structure at {self.data_dir}")
     
@@ -143,13 +135,16 @@ class CryptoStorageManager:
             if field not in STANDARD_FIELDS and field not in CRYPTO_SPECIFIC_FIELDS:
                 self.logger.warning(f"Unknown field: {field}")
 
-            # Use original frequency for directory structure
-            # Note: We keep directory names consistent with user config (1h, 1d, 1w)
-            # but need to ensure FileFeatureStorage points to the correct directory
+            # Use timeframe directly for both directory and file naming
+            # This maintains consistency throughout the storage system
+            
+            # BOUNDARY: convert_for_qlib_internal usage - ONLY for Qlib storage API
+            # This is the ONLY place where conversion should happen in storage operations
+            qlib_freq = convert_for_qlib_internal(freq)
             
             # Build the correct directory path using original timeframe
             feature_dir = self.data_dir / freq / "features" / instrument
-            feature_file = feature_dir / f"{field}.bin"
+            feature_file = feature_dir / f"{field}.{qlib_freq}.bin"
             
             # Create storage instance by constructing the path manually
             # This ensures we use original timeframe directories
@@ -256,8 +251,9 @@ class CryptoStorageManager:
             Time series data
         """
         try:
-            # Convert to qlib frequency format
-            qlib_freq = convert_to_qlib_freq(freq)
+            # BOUNDARY: convert_for_qlib_internal usage - ONLY for Qlib storage API
+            # This conversion is required because FileFeatureStorage expects Qlib format
+            qlib_freq = convert_for_qlib_internal(freq)
 
             storage = FileFeatureStorage(
                 instrument=instrument,
@@ -478,9 +474,19 @@ class CryptoStorageManager:
                 calendar = pd.date_range(start=start_date, end=end_date, freq='D')
             elif freq == "1h":
                 calendar = pd.date_range(start=start_date, end=end_date, freq='H')
+            elif freq == "1min":
+                calendar = pd.date_range(start=start_date, end=end_date, freq='T')
+            elif freq == "5min":
+                calendar = pd.date_range(start=start_date, end=end_date, freq='5T')
+            elif freq == "15min":
+                calendar = pd.date_range(start=start_date, end=end_date, freq='15T')
+            elif freq == "30min":
+                calendar = pd.date_range(start=start_date, end=end_date, freq='30T')
+            elif freq == "1w":
+                calendar = pd.date_range(start=start_date, end=end_date, freq='W')
             else:
-                # For other frequencies, generate based on the frequency
-                calendar = pd.date_range(start=start_date, end=end_date, freq=freq.upper())
+                # Fallback
+                calendar = pd.date_range(start=start_date, end=end_date, freq='D')
             
             # Write calendar
             storage._write_calendar(calendar)
@@ -510,7 +516,9 @@ class CryptoStorageManager:
         # Get all qlib frequencies that should exist
         expected_qlib_freqs = set()
         for timeframe in TIMEFRAME_MAPPING.keys():
-            qlib_freq = convert_to_qlib_freq(timeframe)
+            # BOUNDARY: convert_for_qlib_internal usage - ONLY for Qlib storage API
+            # This is needed to check what Qlib storage expects internally
+            qlib_freq = convert_for_qlib_internal(timeframe)
             expected_qlib_freqs.add(qlib_freq)
         
         for timeframe_dir in self.data_dir.iterdir():

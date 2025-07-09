@@ -185,6 +185,7 @@ class OKXAdapter(ExchangeAdapter):
         
         try:
             # Use centralized timeframe conversion instead of hardcoded mapping
+            # IMPORTANT: OKX uses lowercase timeframes (1h, 1d, 1w), NOT uppercase!
             ccxt_timeframe = get_exchange_timeframe('okx', timeframe)
             
             # Validate against CCXT supported timeframes

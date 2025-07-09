@@ -228,7 +228,7 @@ class LongTermStabilityTest:
             'BTC', 'ETH', 'BNB', 'ADA', 'XRP', 'SOL', 'DOGE', 'DOT', 'AVAX', 'SUI'
         ]
         config.universe.filters.quote_assets = ['USDT']
-        config.collection.timeframes = ['1h', 'day']
+        config.collection.timeframes = ['1h', '1d']
         
         # Force spot market for stability testing (avoid futures/perpetual complexity)
         config.universe.market_types = ['spot']
@@ -571,12 +571,8 @@ class LongTermStabilityTest:
                                 # Collect data for each timeframe
                                 for timeframe in self.config.collection.timeframes:
                                     try:
-                                        # Convert timeframe to CCXT format
+                                        # Use timeframe directly as it's already in CCXT format
                                         ccxt_timeframe = timeframe
-                                        if timeframe == 'day':
-                                            ccxt_timeframe = '1d'
-                                        elif timeframe == '1h':
-                                            ccxt_timeframe = '1h'
                                         
                                         # Make real API call
                                         df = adapter.get_ohlcv(
@@ -854,8 +850,8 @@ Examples:
   # Run 1-hour quick test
   python test_long_term_stability.py --duration 1
   
-  # Run with custom config
-  python test_long_term_stability.py --config config/production.yaml --duration 24
+  # Run with custom template
+  python test_long_term_stability.py --template production --duration 24
   
   # Run in background (daemon mode)
   nohup python test_long_term_stability.py --duration 24 > stability_test.out 2>&1 &
@@ -870,9 +866,9 @@ Examples:
     )
     
     parser.add_argument(
-        '--config',
+        '--template',
         type=str,
-        help='Configuration file path'
+        help='Template name to use for configuration'
     )
     
     parser.add_argument(
@@ -894,7 +890,7 @@ Examples:
     
     # Run the test
     test = LongTermStabilityTest(
-        config_file=args.config,
+        config_file=args.template,
         test_duration_hours=args.duration
     )
     

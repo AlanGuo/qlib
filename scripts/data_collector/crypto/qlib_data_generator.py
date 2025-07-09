@@ -18,9 +18,9 @@ import pandas as pd
 from qlib.utils import get_module_logger
 from qlib.data.storage.file_storage import FileInstrumentStorage, FileCalendarStorage
 
-from config.timeframes import TIMEFRAME_MAPPING, validate_timeframe
+from config.timeframes import TIMEFRAME_MAPPING, validate_timeframe, convert_for_qlib_internal
 from config.fields import STANDARD_FIELDS, CRYPTO_SPECIFIC_FIELDS
-from storage_manager import CryptoStorageManager, convert_to_qlib_freq
+from storage_manager import CryptoStorageManager
 
 
 class QlibDataGenerator:
@@ -227,8 +227,9 @@ class QlibDataGenerator:
                                future: bool = False) -> None:
         """Create a single calendar file."""
         try:
-            # Convert to qlib frequency format for internal qlib operations
-            qlib_freq = convert_to_qlib_freq(freq)
+            # BOUNDARY: convert_for_qlib_internal usage - ONLY for Qlib storage API
+            # This conversion is required because FileCalendarStorage expects Qlib format
+            qlib_freq = convert_for_qlib_internal(freq)
 
             # Use original timeframe for directory structure (maintains consistency with data collection)
             tf_dir = self.data_dir / freq
@@ -236,52 +237,35 @@ class QlibDataGenerator:
             calendars_dir.mkdir(parents=True, exist_ok=True)
 
             # Normalize start_date based on frequency to ensure proper alignment
-            if qlib_freq == "1d":
-                # For daily, start at midnight
+            # Simple calendar generation based on frequency
+            if freq == "1d":
                 aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
                 calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
-            elif qlib_freq == "60min":
-                # For hourly, start at top of hour
+            elif freq == "1h":
                 aligned_start = start_date.replace(minute=0, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='h')
-            elif qlib_freq == "5min":
-                # For 5min, align to 5-minute intervals
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='H')
+            elif freq == "5min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 5) * 5, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='5min')
-            elif qlib_freq == "1min":
-                # For 1min, align to minute boundary
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='5T')
+            elif freq == "1min":
                 aligned_start = start_date.replace(second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='min')
-            elif qlib_freq == "15min":
-                # For 15min, align to 15-minute intervals  
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='T')
+            elif freq == "15min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 15) * 15, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='15min')
-            elif qlib_freq == "30min":
-                # For 30min, align to 30-minute intervals
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='15T')
+            elif freq == "30min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 30) * 30, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='30min')
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='30T')
+            elif freq == "1w":
+                aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                days_since_monday = aligned_start.weekday()
+                aligned_start = aligned_start - timedelta(days=days_since_monday)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='W')
             else:
-                # For other frequencies, try reasonable mappings using qlib format
-                freq_mapping = {
-                    "1w": "W",    # qlib weekly format
-                    "week": "W",  # Legacy weekly support
-                }
-                pandas_freq = freq_mapping.get(qlib_freq, 'D')  # Default to daily
-                try:
-                    # For weekly, align to start of week (Monday)
-                    if pandas_freq == "W":
-                        aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
-                        # Adjust to start of week (Monday)
-                        days_since_monday = aligned_start.weekday()
-                        aligned_start = aligned_start - timedelta(days=days_since_monday)
-                    else:
-                        aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
-                    calendar = pd.date_range(start=aligned_start, end=end_date, freq=pandas_freq)
-                except Exception:
-                    # Fallback to daily
-                    aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
-                    calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
-                    self.logger.warning(f"Unknown frequency {qlib_freq}, using daily calendar")
+                # Fallback to daily
+                aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
+                self.logger.warning(f"Unknown frequency {freq}, using daily calendar")
             
             # Create calendar file name using original timeframe format (for user consistency)
             if future:
@@ -324,8 +308,9 @@ class QlibDataGenerator:
         
         for timeframe in timeframes:
             try:
-                # Load existing instruments
-                qlib_freq = convert_to_qlib_freq(timeframe)
+                # BOUNDARY: convert_for_qlib_internal usage - ONLY for Qlib storage API
+                # This conversion is required because FileInstrumentStorage expects Qlib format
+                qlib_freq = convert_for_qlib_internal(timeframe)
                 storage = FileInstrumentStorage(
                     market=market,
                     freq=qlib_freq,
@@ -406,7 +391,9 @@ class QlibDataGenerator:
             instruments_file = instruments_dir / "crypto.txt"
             if instruments_file.exists():
                 try:
-                    qlib_freq = convert_to_qlib_freq(timeframe)
+                    # BOUNDARY: convert_for_qlib_internal usage - ONLY for Qlib storage API
+                    # This conversion is required because FileInstrumentStorage expects Qlib format
+                    qlib_freq = convert_for_qlib_internal(timeframe)
                     storage = FileInstrumentStorage(
                         market="crypto",
                         freq=qlib_freq,
@@ -472,7 +459,9 @@ class QlibDataGenerator:
             
             # Count instruments from file
             try:
-                qlib_freq = convert_to_qlib_freq(timeframe)
+                # BOUNDARY: convert_for_qlib_internal usage - ONLY for Qlib storage API
+                # This conversion is required because FileInstrumentStorage expects Qlib format
+                qlib_freq = convert_for_qlib_internal(timeframe)
                 storage = FileInstrumentStorage(
                     market="crypto",
                     freq=qlib_freq,

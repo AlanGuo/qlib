@@ -72,6 +72,16 @@ Supported timeframes:
 
 Automatic conversion between timeframes is supported.
 
+#### ⚠️ CRITICAL WARNING: OKX Timeframe Format
+
+**OKX uses lowercase timeframes (1h, 1d, 1w), NOT uppercase!**
+
+This is a common source of bugs that causes "Timeframe not supported" errors:
+- ❌ **WRONG**: "1H", "1D", "1W" (uppercase)
+- ✅ **CORRECT**: "1h", "1d", "1w" (lowercase)
+
+See [OKX Timeframe Warning](okx_timeframe_warning.md) for detailed information.
+
 ### 3. **Data Validation**
 
 Multiple validation layers:

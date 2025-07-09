@@ -1,0 +1,93 @@
+# BtcDom2 Core Symbols Configuration
+# 8个核心币种，2020年确定存在的基础币种
+
+collection:
+  # 单一交易所确保一致性
+  exchanges:
+    - binance
+  
+  # 策略所需时间框架
+  timeframes:
+    - 1h
+    - 1d
+  
+  # 手动指定核心币种（不使用universe自动发现）
+  symbols:
+    - BTC/USDT
+    - ETH/USDT
+    - LTC/USDT
+    - XRP/USDT
+    - BCH/USDT
+    - EOS/USDT
+    - TRX/USDT
+    - DOGE/USDT
+  
+  # 基础字段
+  fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  # 收集设置
+  max_workers: 4
+  rate_limit_delay: 0.1
+  retry_attempts: 3
+  retry_delay: 1.0
+  
+  # 存储设置
+  output_dir: "./crypto_data"
+  file_format: "qlib"
+  compression: "snappy"
+  create_qlib_structure: true
+  
+  # 启用验证
+  enable_validation: true
+  incremental_update: false
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: "./logs/btcdom2_core_collector.log"
+  console_output: true
+
+validation:
+  # 核心币种验证要求
+  enable_price_validation: true
+  enable_volume_validation: true
+  enable_timeseries_validation: true
+  
+  required_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  # 核心币种严格验证
+  max_missing_ratio: 0.02  # 2% max missing for core symbols
+  min_rows: 200
+  
+  # 价格验证
+  max_price_change_pct: 30.0
+  price_outlier_threshold: 3.0
+  
+  # 成交量验证
+  volume_outlier_threshold: 5.0
+  min_volume: 1000
+  
+  # 时间序列验证
+  expected_interval_seconds: 7200  # 2小时间隔 (2 * 60 * 60)
+  max_missing_periods_ratio: 0.05  # 5% 最大缺失时间段
+  allow_duplicate_timestamps: false
+  
+  # 数据一致性验证
+  enable_consistency_validation: true
+  consistency_tolerance: 0.01  # 1% 数值比较容差
+  
+  # 异常检测
+  enable_anomaly_detection: true
+  anomaly_z_score_threshold: 3.0
+  price_spike_threshold: 0.3  # 30% 价格突变阈值
+  volume_spike_threshold: 8.0  # 8倍成交量突变阈值

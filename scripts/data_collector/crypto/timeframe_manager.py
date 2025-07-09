@@ -4,93 +4,40 @@
 """
 Timeframe Manager for Cryptocurrency Data Collection.
 
-This module provides advanced timeframe management functionality including
-validation, conversion, optimization, and exchange-specific handling.
+This module provides simple timeframe management functionality following
+the existing Qlib project patterns used in other data collectors.
 """
 
-from typing import Dict, List, Optional, Set, Tuple, Union
-from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Set
 import logging
-from dataclasses import dataclass
 
 from config.timeframes import (
     TIMEFRAME_MAPPING,
     EXCHANGE_TIMEFRAME_MAPPING,
     SUPPORTED_TIMEFRAMES,
     TIMEFRAME_PRIORITIES,
-    get_timeframe_seconds,
+    validate_timeframe,
+    get_exchange_timeframe,
     get_supported_timeframes_for_exchange,
-    is_high_frequency_timeframe,
-    get_timeframe_category,
-    get_optimal_batch_size,
-    estimate_data_size,
-    get_timeframe_display_name
+    get_timeframe_seconds,
+    sort_timeframes_by_priority
 )
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class TimeframeInfo:
-    """Information about a timeframe."""
-    timeframe: str
-    seconds: int
-    category: str
-    priority: int
-    display_name: str
-    is_high_freq: bool
-    optimal_batch_size: int
-
-
 class TimeframeManager:
     """
-    Advanced timeframe management for cryptocurrency data collection.
+    Simple timeframe management for cryptocurrency data collection.
     
-    This class provides comprehensive timeframe handling including:
-    - Validation and conversion
-    - Exchange-specific mapping
-    - Optimization recommendations
-    - Data size estimation
+    This class provides core timeframe handling functionality similar to
+    other data collectors in the Qlib project.
     """
     
     def __init__(self):
         """Initialize the timeframe manager."""
-        self._cache: Dict[str, TimeframeInfo] = {}
-        self._exchange_cache: Dict[str, Set[str]] = {}
+        self._validated_cache: Set[str] = set()
         
-    def get_timeframe_info(self, timeframe: str) -> Optional[TimeframeInfo]:
-        """
-        Get comprehensive information about a timeframe.
-        
-        Parameters
-        ----------
-        timeframe : str
-            Timeframe string
-            
-        Returns
-        -------
-        Optional[TimeframeInfo]
-            Timeframe information or None if invalid
-        """
-        if timeframe in self._cache:
-            return self._cache[timeframe]
-            
-        if timeframe not in TIMEFRAME_MAPPING:
-            return None
-            
-        info = TimeframeInfo(
-            timeframe=timeframe,
-            seconds=get_timeframe_seconds(timeframe),
-            category=get_timeframe_category(timeframe),
-            priority=TIMEFRAME_PRIORITIES.get(timeframe, 0),
-            display_name=get_timeframe_display_name(timeframe),
-            is_high_freq=is_high_frequency_timeframe(timeframe),
-            optimal_batch_size=get_optimal_batch_size(timeframe)
-        )
-        
-        self._cache[timeframe] = info
-        return info
-    
     def validate_timeframe(self, timeframe: str) -> bool:
         """
         Validate if a timeframe is supported.
@@ -105,259 +52,154 @@ class TimeframeManager:
         bool
             True if timeframe is supported
         """
-        return timeframe in TIMEFRAME_MAPPING
+        if timeframe in self._validated_cache:
+            return True
+            
+        is_valid = validate_timeframe(timeframe)
+        if is_valid:
+            self._validated_cache.add(timeframe)
+        return is_valid
     
-    def validate_timeframe_for_exchange(self, timeframe: str, exchange_id: str) -> bool:
+    def validate_timeframes(self, timeframes: List[str]) -> List[str]:
         """
-        Validate if a timeframe is supported by a specific exchange.
+        Validate a list of timeframes and return only valid ones.
         
         Parameters
         ----------
-        timeframe : str
-            Timeframe to validate
-        exchange_id : str
-            Exchange identifier
+        timeframes : List[str]
+            List of timeframes to validate
             
         Returns
         -------
-        bool
-            True if timeframe is supported by the exchange
+        List[str]
+            List of valid timeframes
         """
-        supported = self.get_supported_timeframes_for_exchange(exchange_id)
-        return timeframe in supported
+        valid_timeframes = []
+        for timeframe in timeframes:
+            if self.validate_timeframe(timeframe):
+                valid_timeframes.append(timeframe)
+            else:
+                logger.warning(f"Timeframe '{timeframe}' is not supported")
+        return valid_timeframes
     
-    def get_supported_timeframes_for_exchange(self, exchange_id: str) -> Set[str]:
-        """
-        Get supported timeframes for an exchange (cached).
-        
-        Parameters
-        ----------
-        exchange_id : str
-            Exchange identifier
-            
-        Returns
-        -------
-        Set[str]
-            Set of supported timeframes
-        """
-        if exchange_id not in self._exchange_cache:
-            timeframes = get_supported_timeframes_for_exchange(exchange_id)
-            self._exchange_cache[exchange_id] = set(timeframes)
-        
-        return self._exchange_cache[exchange_id]
-    
-    def convert_timeframe_for_exchange(self, timeframe: str, exchange_id: str) -> Optional[str]:
+    def get_exchange_timeframe(self, exchange: str, timeframe: str) -> Optional[str]:
         """
         Convert standard timeframe to exchange-specific format.
         
         Parameters
         ----------
+        exchange : str
+            Exchange identifier (binance or okx)
         timeframe : str
             Standard timeframe
-        exchange_id : str
-            Exchange identifier
             
         Returns
         -------
         Optional[str]
             Exchange-specific timeframe or None if not supported
         """
-        exchange_mapping = EXCHANGE_TIMEFRAME_MAPPING.get(exchange_id.lower(), {})
-        return exchange_mapping.get(timeframe)
+        if not self.validate_timeframe(timeframe):
+            return None
+            
+        return get_exchange_timeframe(exchange, timeframe)
     
-    def get_compatible_timeframes(self, 
-                                 exchanges: List[str], 
-                                 categories: Optional[List[str]] = None) -> List[str]:
+    def get_supported_timeframes_for_exchange(self, exchange: str) -> List[str]:
         """
-        Get timeframes compatible with all specified exchanges.
+        Get supported timeframes for an exchange.
+        
+        Parameters
+        ----------
+        exchange : str
+            Exchange identifier
+            
+        Returns
+        -------
+        List[str]
+            List of supported timeframes
+        """
+        return get_supported_timeframes_for_exchange(exchange)
+    
+    def get_common_timeframes(self, exchanges: List[str]) -> List[str]:
+        """
+        Get timeframes supported by all specified exchanges.
         
         Parameters
         ----------
         exchanges : List[str]
             List of exchange identifiers
-        categories : Optional[List[str]]
-            Filter by timeframe categories
             
         Returns
         -------
         List[str]
-            List of compatible timeframes
+            List of common timeframes sorted by priority
         """
         if not exchanges:
             return []
         
         # Get intersection of supported timeframes
-        compatible = self.get_supported_timeframes_for_exchange(exchanges[0])
-        for exchange_id in exchanges[1:]:
-            exchange_timeframes = self.get_supported_timeframes_for_exchange(exchange_id)
-            compatible = compatible.intersection(exchange_timeframes)
-        
-        # Filter by categories if specified
-        if categories:
-            category_timeframes = set()
-            for category in categories:
-                if category in SUPPORTED_TIMEFRAMES:
-                    category_timeframes.update(SUPPORTED_TIMEFRAMES[category])
-            compatible = compatible.intersection(category_timeframes)
+        common = set(self.get_supported_timeframes_for_exchange(exchanges[0]))
+        for exchange in exchanges[1:]:
+            exchange_timeframes = set(self.get_supported_timeframes_for_exchange(exchange))
+            common = common.intersection(exchange_timeframes)
         
         # Sort by priority
-        return sorted(list(compatible), 
-                     key=lambda tf: TIMEFRAME_PRIORITIES.get(tf, 0), 
-                     reverse=True)
+        return sort_timeframes_by_priority(list(common))
     
-    def recommend_timeframes_for_strategy(self, 
-                                        strategy_type: str,
-                                        exchanges: List[str]) -> List[str]:
+    def get_timeframes_by_category(self, category: str) -> List[str]:
         """
-        Recommend optimal timeframes for a trading strategy.
+        Get timeframes by category.
         
         Parameters
         ----------
-        strategy_type : str
-            Strategy type ('scalping', 'intraday', 'swing', 'position')
-        exchanges : List[str]
-            Target exchanges
+        category : str
+            Category name (minute, hour, daily, weekly, all, common)
             
         Returns
         -------
         List[str]
-            Recommended timeframes
+            List of timeframes in the category
         """
-        strategy_mappings = {
-            'scalping': ['scalping', 'high_freq'],
-            'intraday': ['intraday', 'trading'],
-            'swing': ['trading', 'analysis'],
-            'position': ['analysis', 'daily_plus'],
-            'arbitrage': ['ultra_short', 'high_freq'],
-            'market_making': ['ultra_short', 'minute'],
-        }
-        
-        categories = strategy_mappings.get(strategy_type, ['common'])
-        return self.get_compatible_timeframes(exchanges, categories)
+        return SUPPORTED_TIMEFRAMES.get(category, [])
     
-    def estimate_collection_time(self, 
-                               timeframes: List[str],
-                               symbols: List[str],
-                               days: int,
-                               exchanges: List[str]) -> Dict[str, float]:
+    def sort_timeframes_by_priority(self, timeframes: List[str]) -> List[str]:
         """
-        Estimate data collection time for given parameters.
+        Sort timeframes by collection priority.
         
         Parameters
         ----------
         timeframes : List[str]
-            List of timeframes
-        symbols : List[str]
-            List of symbols
-        days : int
-            Number of days of historical data
-        exchanges : List[str]
-            List of exchanges
-            
-        Returns
-        -------
-        Dict[str, float]
-            Estimation results (total_requests, estimated_minutes, etc.)
-        """
-        total_requests = 0
-        total_data_points = 0
-        
-        for timeframe in timeframes:
-            data_points_per_symbol = estimate_data_size(timeframe, days)
-            batch_size = get_optimal_batch_size(timeframe)
-            
-            requests_per_symbol = max(1, data_points_per_symbol // batch_size)
-            
-            # Multiply by symbols and exchanges
-            total_requests += requests_per_symbol * len(symbols) * len(exchanges)
-            total_data_points += data_points_per_symbol * len(symbols) * len(exchanges)
-        
-        # Estimate time based on rate limits (conservative estimate)
-        avg_rate_limit = 0.15  # seconds per request
-        estimated_seconds = total_requests * avg_rate_limit
-        estimated_minutes = estimated_seconds / 60
-        
-        return {
-            'total_requests': total_requests,
-            'total_data_points': total_data_points,
-            'estimated_seconds': estimated_seconds,
-            'estimated_minutes': estimated_minutes,
-            'estimated_hours': estimated_minutes / 60,
-        }
-    
-    def optimize_timeframe_collection_order(self, 
-                                          timeframes: List[str],
-                                          prioritize_high_freq: bool = False) -> List[str]:
-        """
-        Optimize the order of timeframe collection.
-        
-        Parameters
-        ----------
-        timeframes : List[str]
-            List of timeframes to optimize
-        prioritize_high_freq : bool, default False
-            Whether to prioritize high frequency data
+            List of timeframes to sort
             
         Returns
         -------
         List[str]
-            Optimized timeframe order
+            Sorted timeframes (highest priority first)
         """
-        if prioritize_high_freq:
-            # Sort by frequency (high freq first), then by priority
-            return sorted(timeframes, 
-                         key=lambda tf: (
-                             -get_timeframe_seconds(tf),  # Negative for ascending order
-                             -TIMEFRAME_PRIORITIES.get(tf, 0)
-                         ))
-        else:
-            # Sort by priority (high priority first)
-            return sorted(timeframes, 
-                         key=lambda tf: TIMEFRAME_PRIORITIES.get(tf, 0), 
-                         reverse=True)
+        return sort_timeframes_by_priority(timeframes)
     
-    def get_timeframe_statistics(self) -> Dict[str, any]:
+    def get_timeframe_info(self, timeframe: str) -> Dict[str, any]:
         """
-        Get statistics about available timeframes.
+        Get basic information about a timeframe.
         
+        Parameters
+        ----------
+        timeframe : str
+            Timeframe string
+            
         Returns
         -------
         Dict[str, any]
-            Statistics about timeframes
+            Basic timeframe information
         """
-        all_timeframes = list(TIMEFRAME_MAPPING.keys())
-        
-        stats = {
-            'total_timeframes': len(all_timeframes),
-            'by_category': {},
-            'by_exchange': {},
-            'high_frequency_count': 0,
-            'priority_distribution': {},
+        if not self.validate_timeframe(timeframe):
+            return {}
+            
+        return {
+            'timeframe': timeframe,
+            'seconds': get_timeframe_seconds(timeframe),
+            'priority': TIMEFRAME_PRIORITIES.get(timeframe, 0),
+            'is_valid': True
         }
-        
-        # Count by category
-        for category, timeframes in SUPPORTED_TIMEFRAMES.items():
-            if category != 'all':
-                stats['by_category'][category] = len(timeframes)
-        
-        # Count by exchange
-        for exchange_id in EXCHANGE_TIMEFRAME_MAPPING.keys():
-            supported = self.get_supported_timeframes_for_exchange(exchange_id)
-            stats['by_exchange'][exchange_id] = len(supported)
-        
-        # Count high frequency
-        stats['high_frequency_count'] = sum(
-            1 for tf in all_timeframes if is_high_frequency_timeframe(tf)
-        )
-        
-        # Priority distribution
-        for tf in all_timeframes:
-            priority = TIMEFRAME_PRIORITIES.get(tf, 0)
-            priority_range = f"{priority//10*10}-{priority//10*10+9}"
-            stats['priority_distribution'][priority_range] = \
-                stats['priority_distribution'].get(priority_range, 0) + 1
-        
-        return stats
 
 
 # Global instance

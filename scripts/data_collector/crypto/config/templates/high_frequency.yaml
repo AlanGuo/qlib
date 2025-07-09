@@ -7,7 +7,7 @@ collection:
     - binance
     - okx
   
-  # High-frequency timeframes
+  # High-frequency timeframes - using unified format (following Qlib project patterns)
   timeframes:
     - 1min
     - 5min

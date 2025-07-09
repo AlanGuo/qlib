@@ -25,6 +25,8 @@ from .state_storage import StateStorage, FileStateStorage
 from .update_strategy import UpdateStrategy, TimeBasedStrategy, PriorityUpdatePlanner, UpdateDecision
 from .conflict_resolver import ConflictResolver, DefaultConflictResolver, ConflictResolutionStrategy
 from ..config.main_config import CryptoDataConfig
+from ..symbol_lifecycle import SymbolLifecycleManager, SymbolStatus
+from ..delisting_aware_collector import DelistingAwareCollector
 
 
 class IncrementalUpdateError(Exception):
@@ -37,20 +39,28 @@ class IncrementalUpdateManager:
     
     def __init__(self,
                  config: CryptoDataConfig,
+                 lifecycle_manager: Optional[SymbolLifecycleManager] = None,
+                 delisting_collector: Optional[DelistingAwareCollector] = None,
                  state_storage: Optional[StateStorage] = None,
                  update_strategy: Optional[UpdateStrategy] = None,
                  conflict_resolver: Optional[ConflictResolver] = None):
         """
-        Initialize incremental update manager.
+        Initialize incremental update manager with delisting awareness.
         
         Args:
             config: Crypto data configuration
+            lifecycle_manager: Symbol lifecycle manager for delisting detection
+            delisting_collector: Delisting-aware data collector
             state_storage: State storage implementation
             update_strategy: Update strategy implementation
             conflict_resolver: Conflict resolver implementation
         """
         self.config = config
         self.logger = logging.getLogger(__name__)
+        
+        # Initialize delisting-aware components
+        self.lifecycle_manager = lifecycle_manager or self._create_default_lifecycle_manager()
+        self.delisting_collector = delisting_collector or self._create_default_delisting_collector()
         
         # Initialize components
         self.state_storage = state_storage or self._create_default_state_storage()
@@ -69,9 +79,30 @@ class IncrementalUpdateManager:
             'total_updates': 0,
             'successful_updates': 0,
             'failed_updates': 0,
+            'partial_updates': 0,
+            'delisted_symbols_skipped': 0,
+            'suspended_symbols_retried': 0,
             'data_points_collected': 0,
             'conflicts_resolved': 0
         }
+    
+    def _create_default_lifecycle_manager(self) -> SymbolLifecycleManager:
+        """Create default symbol lifecycle manager."""
+        lifecycle_dir = Path(self.config.data_dir) / "symbol_lifecycle"
+        return SymbolLifecycleManager(
+            storage_dir=str(lifecycle_dir),
+            cache_ttl=self.config.incremental.get('symbol_cache_ttl', 3600),
+            enable_persistence=True
+        )
+    
+    def _create_default_delisting_collector(self) -> DelistingAwareCollector:
+        """Create default delisting-aware collector."""
+        return DelistingAwareCollector(
+            lifecycle_manager=self.lifecycle_manager,
+            max_retries=self.config.incremental.get('max_retries', 3),
+            retry_delay=self.config.incremental.get('retry_delay', 1.0),
+            enable_partial_collection=self.config.incremental.get('enable_partial_collection', True)
+        )
     
     def _create_default_state_storage(self) -> StateStorage:
         """Create default state storage."""
@@ -147,7 +178,7 @@ class IncrementalUpdateManager:
                           symbols: Optional[List[str]] = None,
                           timeframes: Optional[List[str]] = None) -> List[Tuple[SymbolUpdateState, UpdateDecision]]:
         """
-        Plan updates for specified criteria.
+        Plan updates for specified criteria with delisting awareness.
         
         Args:
             exchanges: List of exchanges to update (None for all)
@@ -163,10 +194,42 @@ class IncrementalUpdateManager:
         # Get all symbol states that match criteria
         symbol_states = self._get_matching_symbol_states(exchanges, symbols, timeframes)
         
-        # Plan updates using strategy
-        update_plans = self.update_planner.plan_updates(symbol_states, self.update_strategy)
+        # Filter out permanently delisted symbols
+        active_symbol_states = []
+        for symbol_state in symbol_states:
+            try:
+                # Check symbol lifecycle status
+                status_record = self.lifecycle_manager.get_symbol_status(
+                    symbol=symbol_state.symbol,
+                    exchange=symbol_state.exchange,
+                    market_type=getattr(symbol_state, 'market_type', 'spot')
+                )
+                
+                if status_record.status == SymbolStatus.DELISTED:
+                    self.logger.info(f"Skipping delisted symbol: {symbol_state.symbol} on {symbol_state.exchange}")
+                    self.update_stats['delisted_symbols_skipped'] += 1
+                    # Mark symbol state as permanently failed to avoid future planning
+                    symbol_state.mark_permanently_failed("Symbol is delisted")
+                    continue
+                
+                elif status_record.status == SymbolStatus.SUSPENDED:
+                    self.logger.warning(f"Symbol {symbol_state.symbol} on {symbol_state.exchange} is suspended, will retry")
+                    self.update_stats['suspended_symbols_retried'] += 1
+                    # Continue with planning - suspended symbols might come back
+                
+                # Symbol is active or suspended - include in planning
+                active_symbol_states.append(symbol_state)
+                
+            except Exception as e:
+                self.logger.warning(f"Failed to check lifecycle status for {symbol_state.symbol}: {e}")
+                # If we can't check status, include the symbol anyway
+                active_symbol_states.append(symbol_state)
         
-        self.logger.info(f"Planned {len(update_plans)} updates out of {len(symbol_states)} symbols")
+        # Plan updates using strategy
+        update_plans = self.update_planner.plan_updates(active_symbol_states, self.update_strategy)
+        
+        self.logger.info(f"Planned {len(update_plans)} updates out of {len(symbol_states)} symbols "
+                        f"({len(symbol_states) - len(active_symbol_states)} delisted/skipped)")
         
         return update_plans
     
@@ -221,11 +284,16 @@ class IncrementalUpdateManager:
         # Execute updates (could be parallelized)
         for symbol_state, update_decision in update_plans:
             try:
-                result = await self._execute_single_update(symbol_state, update_decision, dry_run)
+                result = await self._execute_single_update_with_delisting_awareness(
+                    symbol_state, update_decision, dry_run
+                )
                 results.append(result)
                 
                 if result['success']:
                     successful_updates += 1
+                elif result.get('partial', False):
+                    successful_updates += 1  # Count partial as success for stats
+                    self.update_stats['partial_updates'] += 1
                 else:
                     failed_updates += 1
                     
@@ -258,11 +326,11 @@ class IncrementalUpdateManager:
             'dry_run': dry_run
         }
     
-    async def _execute_single_update(self, 
-                                   symbol_state: SymbolUpdateState,
-                                   update_decision: UpdateDecision,
-                                   dry_run: bool) -> Dict[str, Any]:
-        """Execute a single update."""
+    async def _execute_single_update_with_delisting_awareness(self, 
+                                                           symbol_state: SymbolUpdateState,
+                                                           update_decision: UpdateDecision,
+                                                           dry_run: bool) -> Dict[str, Any]:
+        """Execute a single update with delisting awareness."""
         
         # Mark update start
         symbol_state.mark_update_start()
@@ -303,36 +371,90 @@ class IncrementalUpdateManager:
             # Get update timeframe
             start_time, end_time = self.update_strategy.get_update_timeframe(symbol_state)
             
-            # Collect new data
-            new_data = await self._collect_data(adapter, symbol_state, start_time, end_time)
-            
-            # Handle conflicts if there's existing data
-            final_data = await self._handle_data_conflicts(symbol_state, new_data)
-            
-            # Update state
-            data_points = len(final_data) if final_data is not None else 0
-            last_timestamp = final_data.index.max() if data_points > 0 else None
-            
-            symbol_state.mark_update_success(
-                data_timestamp=last_timestamp,
-                data_points=data_points
+            # Use delisting-aware collector for data collection
+            collection_result = self.delisting_collector.collect_symbol_data(
+                adapter=adapter,
+                symbol=symbol_state.symbol,
+                timeframe=symbol_state.timeframe,
+                start_time=start_time,
+                end_time=end_time
             )
             
-            self.update_stats['data_points_collected'] += data_points
-            
-            return {
-                'symbol': symbol_state.symbol,
-                'exchange': symbol_state.exchange,
-                'timeframe': symbol_state.timeframe,
-                'success': True,
-                'data_points': data_points,
-                'start_time': start_time,
-                'end_time': end_time,
-                'reason': update_decision.reason
-            }
+            # Process collection result
+            if collection_result['status'] == 'success':
+                # Full success
+                data_points = len(collection_result['data'])
+                last_timestamp = collection_result['data'].index.max() if data_points > 0 else None
+                
+                # Handle conflicts if there's existing data
+                final_data = await self._handle_data_conflicts(symbol_state, collection_result['data'])
+                
+                symbol_state.mark_update_success(
+                    data_timestamp=last_timestamp,
+                    data_points=data_points
+                )
+                
+                self.update_stats['data_points_collected'] += data_points
+                
+                return {
+                    'symbol': symbol_state.symbol,
+                    'exchange': symbol_state.exchange,
+                    'timeframe': symbol_state.timeframe,
+                    'success': True,
+                    'data_points': data_points,
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'reason': update_decision.reason,
+                    'collection_type': collection_result.get('metadata', {}).get('collection_type', 'unknown')
+                }
+                
+            elif collection_result['status'] == 'partial':
+                # Partial success (symbol was delisted mid-period)
+                data_points = len(collection_result['data'])
+                last_timestamp = collection_result['data'].index.max() if data_points > 0 else None
+                
+                # Handle conflicts if there's existing data
+                final_data = await self._handle_data_conflicts(symbol_state, collection_result['data'])
+                
+                symbol_state.mark_update_success(
+                    data_timestamp=last_timestamp,
+                    data_points=data_points
+                )
+                
+                self.update_stats['data_points_collected'] += data_points
+                
+                return {
+                    'symbol': symbol_state.symbol,
+                    'exchange': symbol_state.exchange,
+                    'timeframe': symbol_state.timeframe,
+                    'success': True,
+                    'partial': True,
+                    'data_points': data_points,
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'reason': update_decision.reason,
+                    'collection_type': collection_result.get('metadata', {}).get('collection_type', 'unknown'),
+                    'collection_windows': collection_result.get('collection_windows', []),
+                    'delisting_events': collection_result.get('delisting_events', [])
+                }
+                
+            else:
+                # Failed collection
+                error_msg = f"Collection failed: {collection_result.get('errors', [])}"
+                symbol_state.mark_update_failure(error_msg)
+                
+                return {
+                    'symbol': symbol_state.symbol,
+                    'exchange': symbol_state.exchange,
+                    'timeframe': symbol_state.timeframe,
+                    'success': False,
+                    'error': error_msg,
+                    'data_points': 0,
+                    'collection_errors': collection_result.get('errors', [])
+                }
             
         except Exception as e:
-            error_msg = f"Data collection failed: {str(e)}"
+            error_msg = f"Update execution failed: {str(e)}"
             symbol_state.mark_update_failure(error_msg)
             
             return {
@@ -343,6 +465,15 @@ class IncrementalUpdateManager:
                 'error': error_msg,
                 'data_points': 0
             }
+    
+    async def _execute_single_update(self, 
+                                   symbol_state: SymbolUpdateState,
+                                   update_decision: UpdateDecision,
+                                   dry_run: bool) -> Dict[str, Any]:
+        """Execute a single update (legacy method for backward compatibility)."""
+        return await self._execute_single_update_with_delisting_awareness(
+            symbol_state, update_decision, dry_run
+        )
     
     async def _collect_data(self, 
                           adapter: ExchangeAdapter,

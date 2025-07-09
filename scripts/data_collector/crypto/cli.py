@@ -91,17 +91,23 @@ class CryptoCLI:
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
-  # Collect daily data from Binance
+  # Collect daily data from Binance using default settings
   python cli.py collect --exchanges binance --timeframes 1d --symbols BTC/USDT ETH/USDT
   
-  # Use a configuration template
-  python cli.py collect --template production
+  # Use a predefined template
+  python cli.py collect --template btcdom2
+  
+  # Use a custom template you created
+  python cli.py collect --template my_custom_template
   
   # List available templates
   python cli.py templates list
   
-  # Validate configuration
-  python cli.py validate --config myconfig.yaml
+  # Validate a template
+  python cli.py validate --template btcdom2
+  
+  # Generate a config file from template for customization
+  python cli.py config generate --template btcdom2 --output my_config.yaml
             """
         )
         
@@ -136,14 +142,7 @@ Examples:
         collect_parser.add_argument(
             '--template',
             type=str,
-            choices=['default', 'production', 'research', 'high_frequency', 'simple', 'multi_exchange', 'live_test_4_1'],
-            help='Use a predefined configuration template'
-        )
-        
-        collect_parser.add_argument(
-            '--config',
-            type=str,
-            help='Path to configuration file'
+            help='Use a configuration template (specify template name, e.g., btcdom2, production, research)'
         )
         
         # Basic collection parameters
@@ -280,9 +279,9 @@ Examples:
         )
         
         validate_parser.add_argument(
-            '--config',
+            '--template',
             type=str,
-            help='Configuration file to validate'
+            help='Template to validate'
         )
         
         validate_parser.add_argument(
@@ -311,9 +310,9 @@ Examples:
         generate_parser.add_argument('--template', required=True, help='Template to use')
         generate_parser.add_argument('--output', required=True, help='Output file path')
         
-        # Show config
-        show_parser = config_subparsers.add_parser('show', help='Show current configuration')
-        show_parser.add_argument('--config', help='Configuration file to show')
+        # Show template
+        show_parser = config_subparsers.add_parser('show', help='Show template configuration')
+        show_parser.add_argument('--template', help='Template name to show')
 
     def _add_incremental_parser(self, subparsers):
         """Add incremental update commands."""
@@ -323,17 +322,20 @@ Examples:
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
-  # Trigger incremental update
-  python cli.py incremental update --exchanges binance okx
+  # Trigger incremental update using template
+  python cli.py incremental update --template btcdom2
+
+  # Trigger incremental update with specific settings
+  python cli.py incremental update --exchanges binance okx --template production
 
   # Check incremental status
-  python cli.py incremental status
+  python cli.py incremental status --template btcdom2
 
   # Reset incremental state
-  python cli.py incremental reset --confirm
+  python cli.py incremental reset --confirm --template btcdom2
 
   # Dry run incremental update
-  python cli.py incremental update --dry-run
+  python cli.py incremental update --dry-run --template btcdom2
             """
         )
 
@@ -359,9 +361,9 @@ Examples:
             help='Timeframes to update (default: all configured)'
         )
         update_parser.add_argument(
-            '--config',
+            '--template',
             type=str,
-            help='Configuration file to use'
+            help='Template to use for incremental update'
         )
         update_parser.add_argument(
             '--dry-run',
@@ -377,9 +379,9 @@ Examples:
         # Status command
         status_parser = incremental_subparsers.add_parser('status', help='Show current incremental update status')
         status_parser.add_argument(
-            '--config',
+            '--template',
             type=str,
-            help='Configuration file to use'
+            help='Template to use for status check'
         )
         status_parser.add_argument(
             '--detailed',
@@ -390,9 +392,9 @@ Examples:
         # Reset command
         reset_parser = incremental_subparsers.add_parser('reset', help='Reset incremental state')
         reset_parser.add_argument(
-            '--config',
+            '--template',
             type=str,
-            help='Configuration file to use'
+            help='Template to use for reset operation'
         )
         reset_parser.add_argument(
             '--exchanges',
@@ -418,13 +420,10 @@ Examples:
             if args.template:
                 print(f"Loading template: {args.template}")
                 config = self._load_template_config(args.template)
-            elif args.config:
-                print(f"Loading configuration file: {args.config}")
-                config = CryptoDataConfig.from_file(args.config)
             else:
                 print("Using default configuration")
                 config = CryptoDataConfig()
-                # Apply defaults only when no config file is used
+                # Apply defaults when no template is specified
                 if not args.exchanges:
                     config.collection.exchanges = ['binance']
                 if not args.timeframes:
@@ -503,14 +502,13 @@ Examples:
     
     def handle_validate(self, args):
         """Handle validation commands."""
-        if args.config:
+        if args.template:
             try:
-                config = CryptoDataConfig()
-                config.load_from_file(args.config)
+                config = self._load_template_config(args.template)
                 config.validate()
-                print(f"Configuration file {args.config} is valid")
+                print(f"Template {args.template} is valid")
             except Exception as e:
-                print(f"Configuration validation failed: {e}")
+                print(f"Template validation failed: {e}")
                 sys.exit(1)
         
         if args.data_dir:
@@ -532,9 +530,8 @@ Examples:
         
         elif args.config_action == 'show':
             try:
-                if args.config:
-                    config = CryptoDataConfig()
-                    config.load_from_file(args.config)
+                if args.template:
+                    config = self._load_template_config(args.template)
                 else:
                     config = CryptoDataConfig()
                 
@@ -551,9 +548,8 @@ Examples:
             create_default_manager = incremental.create_default_manager
 
             # Load configuration
-            if args.config:
-                config = CryptoDataConfig()
-                config.load_from_file(args.config)
+            if args.template:
+                config = self._load_template_config(args.template)
             else:
                 config = CryptoDataConfig()
 
@@ -912,20 +908,26 @@ Examples:
 
     def _load_template_config(self, template_name: str) -> CryptoDataConfig:
         """Load configuration from template."""
-        factory_methods = {
-            'default': ConfigFactory.create_default_config,
-            'production': ConfigFactory.create_production_config,
-            'research': ConfigFactory.create_research_config,
-            'high_frequency': ConfigFactory.create_high_frequency_config,
-            'simple': ConfigFactory.create_daily_config,
-            'multi_exchange': ConfigFactory.create_multi_exchange_config
-        }
-        
-        factory_method = factory_methods.get(template_name)
-        if not factory_method:
-            raise ValueError(f"Unknown template: {template_name}")
-        
-        return factory_method()
+        try:
+            # First try to load from template manager
+            from config.template_manager import load_template
+            return load_template(template_name)
+        except Exception as e:
+            # If template manager fails, try factory methods for built-in templates
+            factory_methods = {
+                'default': ConfigFactory.create_default_config,
+                'production': ConfigFactory.create_production_config,
+                'research': ConfigFactory.create_research_config,
+                'high_frequency': ConfigFactory.create_high_frequency_config,
+                'simple': ConfigFactory.create_daily_config,
+                'multi_exchange': ConfigFactory.create_multi_exchange_config
+            }
+            
+            factory_method = factory_methods.get(template_name)
+            if factory_method:
+                return factory_method()
+            else:
+                raise ValueError(f"Template '{template_name}' not found. Available templates can be listed with 'python cli.py templates list'")
 
     def _override_config_from_args(self, config: CryptoDataConfig, args):
         """Override configuration with command line arguments."""
@@ -972,7 +974,7 @@ Examples:
             config.collection.enable_risk_metrics = True
     
     def _execute_data_collection(self, config: CryptoDataConfig):
-        """Execute the actual data collection process."""
+        """Execute the actual data collection process with delisting awareness."""
         try:
             # Import required modules
             from crypto_field_collector import CryptoFieldCollector
@@ -980,6 +982,8 @@ Examples:
             from exchange_adapters.okx_adapter import OKXAdapter
             from storage_manager import CryptoStorageManager
             from qlib_data_generator import QlibDataGenerator
+            from symbol_lifecycle import SymbolLifecycleManager
+            from delisting_aware_collector import DelistingAwareCollector
             from datetime import datetime, timedelta
             
             # Initialize storage manager
@@ -989,6 +993,23 @@ Examples:
             # Initialize Qlib data generator for calendar and instruments
             self.logger.info("Initializing Qlib data generator...")
             qlib_generator = QlibDataGenerator(data_dir=config.collection.output_dir)
+            
+            # Initialize symbol lifecycle manager
+            self.logger.info("Initializing symbol lifecycle manager...")
+            lifecycle_manager = SymbolLifecycleManager(
+                storage_dir=f"{config.collection.output_dir}/symbol_lifecycle",
+                cache_ttl=3600,  # 1 hour cache
+                enable_persistence=True
+            )
+            
+            # Initialize delisting-aware collector
+            self.logger.info("Initializing delisting-aware collector...")
+            delisting_collector = DelistingAwareCollector(
+                lifecycle_manager=lifecycle_manager,
+                max_retries=3,
+                retry_delay=1.0,
+                enable_partial_collection=True
+            )
             
             # Get symbols to collect
             symbols = config.collection.symbols
@@ -1032,29 +1053,28 @@ Examples:
                     # Initialize field collector
                     field_collector = CryptoFieldCollector(adapter)
                     
-                    # Process each symbol for this exchange-market_type combination
-                    for symbol in symbols:
-                        self.logger.info(f"Collecting {symbol} from {exchange} ({market_type})...")
+                    # Process each timeframe
+                    for timeframe in config.collection.timeframes:
+                        self.logger.info(f"Processing timeframe: {timeframe}")
                         
                         try:
-                            # Collect data for each timeframe
-                            for timeframe in config.collection.timeframes:
-                                self.logger.info(f"  Timeframe: {timeframe}")
-                                
-                                try:
-                                    # Use centralized timeframe conversion
-                                    from config.timeframes import get_exchange_timeframe
-                                    ccxt_timeframe = get_exchange_timeframe(adapter.exchange_id, timeframe)
-                                    
-                                    # Get OHLCV data directly from adapter
-                                    df = adapter.get_ohlcv(
-                                        symbol=symbol,
-                                        timeframe=ccxt_timeframe,
-                                        start_time=start_date,
-                                        end_time=end_date
-                                    )
-                                    
-                                    if df is not None and not df.empty:
+                            # Use centralized timeframe conversion
+                            from config.timeframes import get_exchange_timeframe
+                            ccxt_timeframe = get_exchange_timeframe(adapter.exchange_id, timeframe)
+                            
+                            # Use delisting-aware collector to collect data for all symbols
+                            batch_results = delisting_collector.collect_multiple_symbols(
+                                adapter=adapter,
+                                symbols=symbols,
+                                timeframe=ccxt_timeframe,
+                                start_time=start_date,
+                                end_time=end_date
+                            )
+                            
+                            # Process results and store data
+                            for symbol, result in batch_results['results'].items():
+                                if result['status'] in ['success', 'partial']:
+                                    if not result['data'].empty:
                                         # Store the data using correct method signature
                                         # Convert symbol format: BTC/USDT -> BTCUSDT for instrument name
                                         # Include market_type in instrument name to distinguish different markets
@@ -1062,21 +1082,38 @@ Examples:
                                         instrument = f"{exchange.lower()}_{market_type}_{base_instrument.lower()}"
                                         
                                         storage_manager.save_ohlcv_data(
-                                            data=df,
+                                            data=result['data'],
                                             instrument=instrument,
                                             freq=timeframe,
                                             market_type=market_type
                                         )
-                                        self.logger.info(f"    ✅ Stored {len(df)} records for {instrument} ({timeframe}, {market_type})")
-                                    else:
-                                        self.logger.warning(f"    ⚠️ No data returned for {symbol} {timeframe}")
                                         
-                                except Exception as e:
-                                    self.logger.error(f"    ❌ Error collecting timeframe {timeframe}: {e}")
-                                    continue
-                                    
+                                        status_emoji = "✅" if result['status'] == 'success' else "⚠️"
+                                        collection_type = result.get('metadata', {}).get('collection_type', 'unknown')
+                                        self.logger.info(f"    {status_emoji} Stored {len(result['data'])} records for {instrument} ({timeframe}, {market_type}) - {collection_type}")
+                                        
+                                        # Log collection windows for partial collections
+                                        if result['status'] == 'partial' and result.get('collection_windows'):
+                                            for window in result['collection_windows']:
+                                                self.logger.info(f"      Window: {window['start']} to {window['end']} ({window['records']} records)")
+                                    else:
+                                        self.logger.warning(f"    ⚠️ No data in result for {symbol} {timeframe}")
+                                else:
+                                    self.logger.warning(f"    ❌ Failed to collect {symbol} {timeframe}: {result.get('errors', [])}")
+                            
+                            # Log batch statistics
+                            stats = batch_results['stats']
+                            self.logger.info(f"  Batch statistics: {stats['successful_collections']} successful, "
+                                           f"{stats['partial_collections']} partial, {stats['failed_collections']} failed")
+                            
+                            if stats['delisted_symbols'] > 0:
+                                self.logger.info(f"  Delisted symbols detected: {stats['delisted_symbols']}")
+                            
+                            if stats['suspended_symbols'] > 0:
+                                self.logger.info(f"  Suspended symbols detected: {stats['suspended_symbols']}")
+                                
                         except Exception as e:
-                            self.logger.error(f"    ❌ Error collecting {symbol}: {e}")
+                            self.logger.error(f"    ❌ Error collecting timeframe {timeframe}: {e}")
                             continue
             
             # After all data collection, generate Qlib structure files
@@ -1150,8 +1187,8 @@ Examples:
             self.parser.print_help()
             return
         
-        # Setup basic logging (will be overridden by config.setup_logging() if a config file is used)
-        if not hasattr(args, 'config') or not args.config:
+        # Setup basic logging (will be overridden by config.setup_logging() if a template is used)
+        if not hasattr(args, 'template') or not args.template:
             logging.basicConfig(
                 level=logging.INFO,
                 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'

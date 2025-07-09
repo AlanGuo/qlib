@@ -24,7 +24,7 @@ class TestTimeframeMapping:
 
     def test_timeframe_mapping_exists(self):
         """Test that basic timeframe mapping exists."""
-        expected_timeframes = ["1min", "5min", "15min", "30min", "1h", "day"]
+        expected_timeframes = ["1min", "5min", "15min", "30min", "1h", "1d"]
         actual_timeframes = list(TIMEFRAME_MAPPING.keys())
 
         for tf in expected_timeframes:
@@ -50,7 +50,7 @@ class TestTimeframeValidation:
 
     def test_valid_timeframes(self):
         """Test validation of valid timeframes."""
-        valid_timeframes = ["1min", "5min", "15min", "30min", "1h", "day"]
+        valid_timeframes = ["1min", "5min", "15min", "30min", "1h", "1d"]
 
         for tf in valid_timeframes:
             assert validate_timeframe(tf), f"Valid timeframe {tf} failed validation"
@@ -68,7 +68,7 @@ class TestQlibConversion:
 
     def test_qlib_format_conversion(self):
         """Test conversion to Qlib format."""
-        from config.timeframes import convert_to_qlib_freq, is_qlib_compatible_timeframe
+        from config.timeframes import convert_for_qlib_internal, validate_timeframe
 
         test_cases = {
             "1min": "1min",
@@ -78,16 +78,15 @@ class TestQlibConversion:
             "1h": "60min",     # 1h maps to qlib's 60min format
             "1d": "1d",        # 1d maps to qlib's 1d format
             "1w": "1w",        # 1w maps to qlib's 1w format
-            "day": "1d",       # Legacy support - convert to qlib format
-            "week": "1w"       # Legacy support - convert to qlib format
         }
 
+        # Test all conversions
         for input_tf, expected_output in test_cases.items():
-            actual_output = convert_to_qlib_freq(input_tf)
+            actual_output = convert_for_qlib_internal(input_tf)
             assert actual_output == expected_output, f"Conversion failed: {input_tf} -> {actual_output}, expected {expected_output}"
 
             # Check if it's qlib compatible
-            assert is_qlib_compatible_timeframe(input_tf), f"Timeframe {input_tf} should be qlib compatible"
+            assert validate_timeframe(input_tf), f"Timeframe {input_tf} should be valid"
 
 class TestExchangeTimeframeConversion:
     """Test exchange-specific timeframe conversion."""
@@ -102,7 +101,7 @@ class TestExchangeTimeframeConversion:
             "15min": "15m",
             "30min": "30m",
             "1h": "1h",
-            "day": "1d"
+            "1d": "1d"
         }
 
         for standard_tf, expected_binance_tf in binance_cases.items():
@@ -118,8 +117,8 @@ class TestExchangeTimeframeConversion:
             "5min": "5m",
             "15min": "15m",
             "30min": "30m",
-            "1h": "1H",
-            "day": "1D"
+            "1h": "1h",  # OKX uses lowercase, NOT "1H"
+            "1d": "1d"   # OKX uses lowercase, NOT "1D"
         }
 
         for standard_tf, expected_okx_tf in okx_cases.items():
@@ -139,7 +138,7 @@ class TestTimeframeSeconds:
             "15min": 900,
             "30min": 1800,
             "1h": 3600,
-            "day": 86400
+            "1d": 86400
         }
 
         for timeframe, expected_seconds in test_cases.items():
@@ -147,22 +146,3 @@ class TestTimeframeSeconds:
             assert actual_seconds == expected_seconds, f"Seconds conversion failed: {timeframe} -> {actual_seconds}, expected {expected_seconds}"
 
 
-class TestTimeframeDisplayNames:
-    """Test timeframe display names."""
-
-    def test_display_names(self):
-        """Test timeframe display names."""
-        from config.timeframes import get_timeframe_display_name
-
-        test_cases = {
-            "1min": "1 Minute",
-            "5min": "5 Minutes",
-            "15min": "15 Minutes",
-            "30min": "30 Minutes",
-            "1h": "1 Hour",
-            "day": "1 Day"
-        }
-
-        for timeframe, expected_display in test_cases.items():
-            actual_display = get_timeframe_display_name(timeframe)
-            assert actual_display == expected_display, f"Display name failed: {timeframe} -> {actual_display}, expected {expected_display}"

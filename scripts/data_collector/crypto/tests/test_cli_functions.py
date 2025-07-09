@@ -110,13 +110,13 @@ class TestCLIFunctions:
                 import yaml
                 yaml.dump(test_config, f)
             
-            # Test config validation
-            with patch('sys.argv', ['crypto_cli', 'config', 'validate', '--config', str(config_file)]):
+            # Test template validation
+            with patch('sys.argv', ['crypto_cli', 'validate', '--template', 'default']):
                 try:
-                    result = cli.handle_config_command(['validate', '--config', str(config_file)])
-                    print("✅ Config validation completed")
+                    result = cli.handle_validate(['--template', 'default'])
+                    print("✅ Template validation completed")
                 except Exception as validate_error:
-                    print(f"Note: Config validation failed: {validate_error}")
+                    print(f"Note: Template validation failed: {validate_error}")
             
             print("✅ Config command test completed")
             
@@ -250,15 +250,15 @@ class TestCLIFunctions:
         try:
             cli = CryptoCLI()
             
-            # Test handling of missing configuration
-            with patch('sys.argv', ['crypto_cli', 'collect', '--config', '/nonexistent/config.yaml']):
+            # Test handling of missing template
+            with patch('sys.argv', ['crypto_cli', 'collect', '--template', 'nonexistent_template']):
                 try:
                     result = cli.run()
-                    print("Warning: Missing config was not handled properly")
-                except (FileNotFoundError, SystemExit) as expected_error:
-                    print("✅ Correctly handled missing configuration")
+                    print("Warning: Missing template was not handled properly")
+                except (FileNotFoundError, SystemExit, ValueError) as expected_error:
+                    print("✅ Correctly handled missing template")
                 except Exception as other_error:
-                    print(f"✅ Handled missing configuration with: {type(other_error).__name__}")
+                    print(f"✅ Handled missing template with: {type(other_error).__name__}")
             
             # Test handling of invalid data directory
             with patch('sys.argv', ['crypto_cli', 'status', '--data', '--dir', '/nonexistent/directory']):

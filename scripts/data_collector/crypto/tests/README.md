@@ -48,6 +48,7 @@ scripts/data_collector/crypto/tests/
 ├── test_decline_factors.py            # 跌幅因子单元测试
 ├── test_volume_factors.py             # 成交量因子单元测试
 ├── test_momentum_factors.py           # 动能因子单元测试
+├── test_delisting_scenarios.py        # 下架场景处理测试
 ├── run_factor_integration_test.py     # 因子集成测试演示
 ├── run_factor_validation.py           # 因子有效性验证
 └── data/                              # 测试数据
@@ -86,6 +87,13 @@ scripts/data_collector/crypto/tests/data/
 - 数据验证
 - 可视化输出
 
+### 4. 特殊场景测试
+- **下架场景测试**: `test_delisting_scenarios.py`
+  - 符号生命周期管理测试
+  - 部分数据收集功能测试
+  - CCXT错误处理测试
+  - 增量更新中的下架感知测试
+
 ## 运行方式
 
 ### pytest测试
@@ -101,6 +109,9 @@ pytest scripts/data_collector/crypto/tests/test_crypto_alpha_factors.py -v
 
 # 运行特定测试函数
 pytest scripts/data_collector/crypto/tests/test_crypto_alpha_factors.py::test_factor_expressions -v
+
+# 运行下架场景测试
+pytest scripts/data_collector/crypto/tests/test_delisting_scenarios.py -v
 
 # 运行带标记的测试
 pytest scripts/data_collector/crypto/tests/ -m "not slow" -v

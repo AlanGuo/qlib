@@ -1,0 +1,123 @@
+# BtcDom2 Strategy Data Collection Configuration
+# Optimized for BTC dominance strategy requirements
+
+collection:
+  # Single exchange for consistency
+  exchanges:
+    - binance
+  
+  # Strategy-specific timeframes
+  timeframes:
+    - 1h
+    - 1d
+  
+  # Core fields for factor calculation
+  fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+    - funding_rate
+    - open_interest
+  
+  # Collection settings
+  max_workers: 4
+  rate_limit_delay: 0.1
+  retry_attempts: 3
+  retry_delay: 1.0
+  
+  # 5-year historical data for strategy
+  start_date: "2020-01-01"
+  end_date: "2024-12-31"
+  
+  # Strategy storage settings
+  output_dir: "./crypto_data"
+  file_format: "qlib"
+  compression: "snappy"
+  create_qlib_structure: true
+  
+  # Enable validation
+  enable_extended_fields: true
+  enable_validation: true
+  incremental_update: false
+
+universe:
+  name: "btcdom2_strategy"
+  description: "BTC dominance strategy universe"
+
+  exchanges:
+    - binance
+  primary_exchange: "binance"
+
+  # Both spot and futures for strategy
+  market_types:
+    - spot
+    - futures
+
+  # Strategy-specific filters
+  filters:
+    min_volume_24h: 5000000  # 5M USDT minimum (spot volume)
+    quote_assets:
+      - USDT
+    market_types:
+      - spot
+      - futures
+
+  # Strategy universe size
+  max_symbols: 60
+  min_symbols: 40
+
+  ranking_criteria:
+    - volume_24h  # Use spot volume for ranking
+  ranking_order: "desc"
+
+  # Update settings
+  update_frequency: "daily"
+  rebalance_frequency: "weekly"
+
+validation:
+  # Strategy validation requirements
+  enable_price_validation: true
+  enable_volume_validation: true
+  enable_timeseries_validation: true
+  
+  required_fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  
+  # Strategy-specific validation
+  max_missing_ratio: 0.05  # 5% max missing
+  min_rows: 100
+  
+  # Price validation
+  max_price_change_pct: 50.0
+  price_outlier_threshold: 3.0
+  
+  # Volume validation for strategy
+  volume_outlier_threshold: 5.0
+  min_volume: 1000  # Minimum volume threshold
+  
+  # Time series validation
+  expected_interval_seconds: 7200  # 2 hours max gap (2 * 60 * 60)
+  max_missing_periods_ratio: 0.05  # 5% max missing periods
+  allow_duplicate_timestamps: false
+  
+  # Data consistency validation
+  enable_consistency_validation: true
+  consistency_tolerance: 0.01  # 1% tolerance for numerical comparisons
+  
+  # Anomaly detection
+  enable_anomaly_detection: true
+  anomaly_z_score_threshold: 3.0
+  price_spike_threshold: 0.3  # 30% price spike threshold
+  volume_spike_threshold: 8.0  # 8x volume spike threshold
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: "./logs/btcdom2_collector.log"
+  console_output: true

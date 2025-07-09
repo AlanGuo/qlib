@@ -48,6 +48,21 @@ docs/crypto/
 ### 6. Risk-Managed Strategy (风险管理型)
 - 权重: 风险平价, 止损: 保守设置, 风险优先
 
+## ⚠️ 重要提醒：OKX Timeframe格式
+
+**OKX交换所的timeframe格式是小写，不是大写！**
+
+这是开发中最常见的错误之一。详细信息请参考：
+- 📖 [OKX Timeframe格式警告文档](okx_timeframe_warning.md)
+
+### 常见错误
+```
+❌ 错误: "1H", "1D", "1W" (大写)
+✅ 正确: "1h", "1d", "1w" (小写)
+```
+
+这个问题在修改过程中总是会被改错，请务必注意！
+
 ### 7. BTC Dominance Focus (BTC主导聚焦型)
 - BTC配比: 65%, 因子聚焦: 跌幅+动能, 主导期优化
 
