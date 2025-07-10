@@ -525,7 +525,9 @@ class LiveTestRunner:
         }
         
         # Save report
-        report_file = Path("test_report_live.json")
+        report_dir = Path("../reports")
+        report_dir.mkdir(exist_ok=True)
+        report_file = report_dir / f"test_report_live_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(report_file, 'w') as f:
             json.dump(report, f, indent=2)
         

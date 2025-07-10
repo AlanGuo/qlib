@@ -15,6 +15,12 @@ logs
 crypto_data
 test_data
 
+# Test reports
+scripts/data_collector/crypto/tests/reports/
+test_report_*.json
+test_report_*.txt
+execution_test_results.json
+
 *.pkl
 *.hd5
 *.csv

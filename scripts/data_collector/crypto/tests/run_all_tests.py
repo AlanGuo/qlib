@@ -192,7 +192,8 @@ def main():
         print(f"  {status} - {result['name']}")
     
     # 保存测试报告
-    report_file = f"test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    os.makedirs("reports", exist_ok=True)
+    report_file = f"reports/test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     with open(report_file, 'w', encoding='utf-8') as f:
         f.write(f"加密货币数据收集器测试报告\n")
         f.write(f"生成时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')}\n")

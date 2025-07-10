@@ -30,6 +30,27 @@ tests/
 └── run_all_tests.py        # Main test runner
 ```
 
+## Test Reports
+
+Test reports are automatically saved to the `reports/` directory:
+
+- **Live test reports**: `test_report_live_YYYYMMDD_HHMMSS.json`
+- **General test reports**: `test_report_YYYYMMDD_HHMMSS.txt`
+- **Coverage reports**: `htmlcov/` (if coverage is enabled)
+
+### Managing Reports
+
+```bash
+# List all reports
+python manage_reports.py list
+
+# Show summary
+python manage_reports.py summary
+
+# Clean old reports (older than 30 days)
+python manage_reports.py clean --days 30
+```
+
 ## Configuration
 
 For live tests, you may need to configure network proxy:
