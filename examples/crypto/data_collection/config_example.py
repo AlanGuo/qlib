@@ -134,7 +134,7 @@ def example_environment_variables():
     # Set environment variables
     os.environ['CRYPTO_EXCHANGES'] = 'binance,okx'
     os.environ['CRYPTO_TIMEFRAMES'] = '1h,4h,1d'
-    os.environ['CRYPTO_OUTPUT_DIR'] = '/tmp/crypto_data'
+    os.environ['CRYPTO_OUTPUT_DIR'] = str(Path.cwd() / 'crypto_data_temp')
     os.environ['CRYPTO_MAX_WORKERS'] = '8'
     os.environ['CRYPTO_LOG_LEVEL'] = 'DEBUG'
     

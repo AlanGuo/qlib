@@ -688,9 +688,9 @@ class ConfigFactory:
         config.performance.max_memory_usage = 0.6
         config.performance.enable_caching = True
 
-        # Production logging
+        # Production logging - use environment variable or default to relative path
         config.logging.level = "INFO"
-        config.logging.file_path = "/var/log/crypto_collector.log"
+        config.logging.file_path = os.environ.get("CRYPTO_LOG_FILE", "./logs/crypto_collector.log")
         config.logging.max_file_size = 50 * 1024 * 1024  # 50MB
 
         # Conservative risk config

@@ -9,11 +9,15 @@ This test runs after data collection to validate storage integrity.
 
 import pytest
 import sys
+import os
 import tempfile
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from datetime import datetime, timedelta
+
+# Remove unused imports
+# timedelta is not used in this file
 
 # Add crypto collector to path
 _current_dir = Path(__file__).parent
@@ -152,7 +156,12 @@ class TestWriteReadConsistency:
 
     def test_real_collection_data_integrity(self):
         """Test integrity of actually collected data."""
-        crypto_data_dir = Path("/Users/alanguo/Projects/qlib/crypto_data/core")
+        # Use environment variable or skip if no real data directory specified
+        crypto_data_dir_env = os.environ.get("CRYPTO_DATA_DIR")
+        if not crypto_data_dir_env:
+            pytest.skip("No CRYPTO_DATA_DIR environment variable set - skipping real data validation")
+        
+        crypto_data_dir = Path(crypto_data_dir_env)
         
         if not crypto_data_dir.exists():
             pytest.skip("No collected crypto data found")
@@ -211,7 +220,12 @@ class TestWriteReadConsistency:
 
     def test_calendar_data_consistency(self):
         """Test that calendar entries match data counts."""
-        crypto_data_dir = Path("/Users/alanguo/Projects/qlib/crypto_data/core")
+        # Use environment variable or skip if no real data directory specified
+        crypto_data_dir_env = os.environ.get("CRYPTO_DATA_DIR")
+        if not crypto_data_dir_env:
+            pytest.skip("No CRYPTO_DATA_DIR environment variable set - skipping calendar validation")
+        
+        crypto_data_dir = Path(crypto_data_dir_env)
         
         if not crypto_data_dir.exists():
             pytest.skip("No collected crypto data found")
@@ -259,7 +273,12 @@ class TestWriteReadConsistency:
 
     def test_ohlc_relationships(self):
         """Test that OHLC relationships are maintained in stored data."""
-        crypto_data_dir = Path("/Users/alanguo/Projects/qlib/crypto_data/core")
+        # Use environment variable or skip if no real data directory specified
+        crypto_data_dir_env = os.environ.get("CRYPTO_DATA_DIR")
+        if not crypto_data_dir_env:
+            pytest.skip("No CRYPTO_DATA_DIR environment variable set - skipping OHLC validation")
+        
+        crypto_data_dir = Path(crypto_data_dir_env)
         
         if not crypto_data_dir.exists():
             pytest.skip("No collected crypto data found")
