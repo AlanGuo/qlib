@@ -48,6 +48,7 @@ class LiveTestRunner:
             ("Resume Functionality", self._test_resume_functionality),
             ("State Management", self._test_state_management),
             ("Data Quality Validation", self._test_data_quality),
+            ("Write-Read Consistency", self._test_write_read_consistency),
             ("Multi-Exchange Support", self._test_multi_exchange)
         ]
         
@@ -136,20 +137,34 @@ class LiveTestRunner:
     
     def _check_directory_structure(self) -> bool:
         """Check if directory structure is correct."""
+        # Get the crypto directory path from the test runner location
+        crypto_dir = Path(__file__).parent.parent.parent
         required_paths = [
-            Path("../config/main_config.py"),
-            Path("../exchange_adapters"),
+            crypto_dir / "config" / "main_config.py",
+            crypto_dir / "exchange_adapters",
             Path(".")
         ]
-        return all(path.exists() for path in required_paths)
+        all_exist = True
+        for path in required_paths:
+            if not path.exists():
+                print(f"        Missing path: {path.resolve()}")
+                all_exist = False
+        return all_exist
     
     def _check_config_files(self) -> bool:
         """Check if configuration files exist."""
+        # Get the crypto directory path from the test runner location
+        crypto_dir = Path(__file__).parent.parent.parent
         config_files = [
-            Path("../config/main_config.py"),
-            Path("../config/exchanges.py")
+            crypto_dir / "config" / "main_config.py",
+            crypto_dir / "config" / "exchanges.py"
         ]
-        return all(path.exists() for path in config_files)
+        all_exist = True
+        for config_file in config_files:
+            if not config_file.exists():
+                print(f"        Missing config file: {config_file.resolve()}")
+                all_exist = False
+        return all_exist
     
     def _test_network_connectivity(self) -> bool:
         """Test network connectivity with proxy."""
@@ -414,49 +429,289 @@ class LiveTestRunner:
                 'volume': [100, 200, 300, 0, 500, 600, 700, 800, 900, 1000]
             })
             
-            # Quality validation
+            print(f"    📊 Original data: {len(problematic_data)} records")
+            
+            # Detailed Quality validation with record counting
             issues = 0
+            problematic_records = set()
             
             # Check for missing values
-            if problematic_data.isnull().any().any():
+            missing_mask = problematic_data[['open', 'high', 'low', 'close']].isnull().any(axis=1)
+            missing_count = missing_mask.sum()
+            if missing_count > 0:
                 issues += 1
-                print("    ⚠️  Missing values detected")
+                problematic_records.update(missing_mask[missing_mask].index.tolist())
+                print(f"    ⚠️  Missing values detected: {missing_count} records")
             
             # Check for negative values
-            if (problematic_data[['open', 'high', 'low', 'close']] < 0).any().any():
+            negative_mask = (problematic_data[['open', 'high', 'low', 'close']] < 0).any(axis=1)
+            negative_count = negative_mask.sum()
+            if negative_count > 0:
                 issues += 1
-                print("    ⚠️  Negative prices detected")
+                problematic_records.update(negative_mask[negative_mask].index.tolist())
+                print(f"    ⚠️  Negative prices detected: {negative_count} records")
             
             # Check for infinite values
-            if np.isinf(problematic_data[['open', 'high', 'low', 'close']]).any().any():
+            infinite_mask = np.isinf(problematic_data[['open', 'high', 'low', 'close']]).any(axis=1)
+            infinite_count = infinite_mask.sum()
+            if infinite_count > 0:
                 issues += 1
-                print("    ⚠️  Infinite values detected")
+                problematic_records.update(infinite_mask[infinite_mask].index.tolist())
+                print(f"    ⚠️  Infinite values detected: {infinite_count} records")
             
             # Check for zero volume
-            if (problematic_data['volume'] == 0).any():
+            zero_volume_mask = (problematic_data['volume'] == 0)
+            zero_volume_count = zero_volume_mask.sum()
+            if zero_volume_count > 0:
                 issues += 1
-                print("    ⚠️  Zero volume detected")
+                problematic_records.update(zero_volume_mask[zero_volume_mask].index.tolist())
+                print(f"    ⚠️  Zero volume detected: {zero_volume_count} records")
             
             if issues > 0:
-                print(f"    ✅ Quality validation detected {issues} issues")
+                print(f"    ✅ Quality validation detected {issues} issue types")
+                print(f"    📋 Total problematic records: {len(problematic_records)}")
                 
-                # Test data cleaning
-                cleaned_data = problematic_data.dropna()
-                cleaned_data = cleaned_data[cleaned_data[['open', 'high', 'low', 'close']] > 0].dropna()
-                cleaned_data = cleaned_data[np.isfinite(cleaned_data[['open', 'high', 'low', 'close']]).all(axis=1)]
+                # Test data cleaning with proper logic
+                cleaned_data = problematic_data.copy()
+                initial_count = len(cleaned_data)
                 
-                if len(cleaned_data) > 0:
-                    print(f"    ✅ Data cleaning successful: {len(problematic_data)} -> {len(cleaned_data)}")
+                # Remove records with missing values in price fields
+                cleaned_data = cleaned_data.dropna(subset=['open', 'high', 'low', 'close'])
+                after_missing = len(cleaned_data)
+                
+                # Remove records with negative prices
+                price_cols = ['open', 'high', 'low', 'close']
+                cleaned_data = cleaned_data[~(cleaned_data[price_cols] < 0).any(axis=1)]
+                after_negative = len(cleaned_data)
+                
+                # Remove records with infinite values
+                cleaned_data = cleaned_data[np.isfinite(cleaned_data[price_cols]).all(axis=1)]
+                after_infinite = len(cleaned_data)
+                
+                # For zero volume, we can keep records but flag them
+                zero_volume_in_clean = (cleaned_data['volume'] == 0).sum()
+                
+                total_removed = initial_count - after_infinite
+                
+                print(f"    🧹 Data cleaning results:")
+                print(f"      - Removed {initial_count - after_missing} records with missing values")
+                print(f"      - Removed {after_missing - after_negative} records with negative prices")
+                print(f"      - Removed {after_negative - after_infinite} records with infinite values")
+                print(f"      - Flagged {zero_volume_in_clean} records with zero volume (kept)")
+                print(f"    ✅ Data cleaning correctly identified and removed all {total_removed} problematic records")
+                
+                # Verify the expected behavior
+                expected_removed = len(problematic_records) - zero_volume_count  # Zero volume records are flagged, not removed
+                if total_removed == expected_removed:
+                    print(f"    ✅ Expected {expected_removed} records removed, actual {total_removed} - CORRECT")
                     return True
                 else:
-                    print(f"    ✅ Data cleaning correctly identified and removed all {len(problematic_data)} problematic records")
-                    return True  # This is actually correct behavior
+                    print(f"    ❌ Expected {expected_removed} records removed, actual {total_removed} - MISMATCH")
+                    return False
             else:
                 print("    ❌ No quality issues detected in test data")
                 return False
                 
         except Exception as e:
             print(f"    ❌ Data quality error: {e}")
+            return False
+    
+    def _test_write_read_consistency(self) -> bool:
+        """Test that written data can be read back correctly."""
+        try:
+            import pandas as pd
+            import numpy as np
+            import tempfile
+            from pathlib import Path
+            
+            print("    🔄 Testing write-read consistency with live data scenarios...")
+            
+            # Test with different data sizes and types
+            test_scenarios = [
+                {
+                    'name': 'Small Dataset (24 hours)',
+                    'periods': 24,
+                    'freq': 'h',
+                    'base_price': 50000.0
+                },
+                {
+                    'name': 'Medium Dataset (7 days)',
+                    'periods': 168, 
+                    'freq': 'h',
+                    'base_price': 50000.0
+                },
+                {
+                    'name': 'Large Dataset (365 days)',
+                    'periods': 365,
+                    'freq': 'D', 
+                    'base_price': 50000.0
+                },
+                {
+                    'name': 'Edge Values (astronomical numbers)',
+                    'periods': 10,
+                    'freq': 'h',
+                    'base_price': 1e-8  # Very small crypto prices
+                }
+            ]
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                success_count = 0
+                
+                for scenario in test_scenarios:
+                    try:
+                        print(f"      📊 Testing {scenario['name']}...")
+                        
+                        # Generate realistic test data
+                        dates = pd.date_range(start='2020-01-01', periods=scenario['periods'], freq=scenario['freq'])
+                        
+                        # Create realistic price movements
+                        base_price = scenario['base_price']
+                        price_changes = np.random.normal(0, 0.02, scenario['periods'])  # 2% volatility
+                        prices = [base_price]
+                        
+                        for change in price_changes[1:]:
+                            new_price = prices[-1] * (1 + change)
+                            prices.append(max(new_price, base_price * 0.1))  # Prevent negative prices
+                        
+                        test_data = pd.DataFrame({
+                            'datetime': dates,
+                            'open': prices,
+                            'high': [p * (1 + abs(np.random.normal(0, 0.01))) for p in prices],
+                            'low': [p * (1 - abs(np.random.normal(0, 0.01))) for p in prices],
+                            'close': [p * (1 + np.random.normal(0, 0.005)) for p in prices],
+                            'volume': np.random.uniform(100000, 5000000, scenario['periods'])
+                        })
+                        
+                        # Ensure OHLC relationships
+                        test_data['high'] = np.maximum(test_data['high'], np.maximum(test_data['open'], test_data['close']))
+                        test_data['low'] = np.minimum(test_data['low'], np.minimum(test_data['open'], test_data['close']))
+                        
+                        # Test storage and reading using actual crypto collector components
+                        try:
+                            # Set up sys.path and handle config.fields import
+                            import sys
+                            import os
+                            import importlib.util
+                            
+                            crypto_collector_path = Path(__file__).parent.parent.parent
+                            if str(crypto_collector_path) not in sys.path:
+                                sys.path.insert(0, str(crypto_collector_path))
+                            
+                            # Clear any cached config.fields module
+                            if 'config.fields' in sys.modules:
+                                del sys.modules['config.fields']
+                            if 'config' in sys.modules:
+                                del sys.modules['config']
+                            
+                            # Try direct import first
+                            try:
+                                from config.fields import STANDARD_FIELDS
+                            except ImportError:
+                                # Fallback: use importlib to load the module directly
+                                fields_path = crypto_collector_path / "config" / "fields.py"
+                                spec = importlib.util.spec_from_file_location("config.fields", fields_path)
+                                config_fields = importlib.util.module_from_spec(spec)
+                                sys.modules['config.fields'] = config_fields
+                                spec.loader.exec_module(config_fields)
+                                STANDARD_FIELDS = config_fields.STANDARD_FIELDS
+                            
+                            from storage_manager import CryptoStorageManager
+                            from cli import CryptoCLI
+                            
+                            # Store data using storage manager
+                            storage = CryptoStorageManager(temp_dir)
+                            ohlcv_data = test_data[['open', 'high', 'low', 'close', 'volume']].copy().astype(np.float64)
+                            
+                            for field in ['open', 'high', 'low', 'close', 'volume']:
+                                field_data = ohlcv_data[field]
+                                # Create series with datetime index for qlib format
+                                field_series = pd.Series(field_data.values, index=test_data['datetime'])
+                                storage.save_feature_data(field_series, "testusdt", field, "1d")
+                            
+                            # Create CLI instance for reading
+                            cli = CryptoCLI()
+                            
+                            # Read back and validate each field
+                            validation_passed = True
+                            for field in ['open', 'high', 'low', 'close', 'volume']:
+                                # Qlib format: data_dir/timeframe/features/instrument/field.timeframe.bin
+                                field_file = Path(temp_dir) / "1d" / "features" / "testusdt" / f"{field}.1d.bin"
+                                
+                                if field_file.exists():
+                                    read_data = cli._load_binary_field(field_file)
+                                    original_data = ohlcv_data[field].values
+                                    
+                                    # Comprehensive validation checks
+                                    checks = [
+                                        # 1. Data count consistency
+                                        (len(read_data) == len(original_data), 
+                                         f"Length mismatch: {len(read_data)} != {len(original_data)}"),
+                                        
+                                        # 2. No astronomical values
+                                        (np.all(read_data < 1e15), 
+                                         f"Astronomical values detected: max={np.max(read_data)}"),
+                                        
+                                        # 3. No negative values for prices/volume
+                                        (np.all(read_data >= 0), 
+                                         f"Negative values detected: min={np.min(read_data)}"),
+                                        
+                                        # 4. No NaN values
+                                        (not np.any(np.isnan(read_data)), 
+                                         "NaN values detected"),
+                                        
+                                        # 5. No infinite values
+                                        (not np.any(np.isinf(read_data)), 
+                                         "Infinite values detected"),
+                                        
+                                        # 6. Data integrity (approximate equality)
+                                        (np.allclose(read_data, original_data, rtol=1e-10), 
+                                         f"Data corruption: max diff={np.max(np.abs(read_data - original_data))}")
+                                    ]
+                                    
+                                    for check_passed, error_msg in checks:
+                                        if not check_passed:
+                                            print(f"        ❌ {field}: {error_msg}")
+                                            validation_passed = False
+                                            break
+                                    
+                                    if validation_passed:
+                                        # Additional range checks for realistic values
+                                        if field in ['open', 'high', 'low', 'close']:
+                                            reasonable_min = base_price * 0.001  # 0.1% of base price
+                                            reasonable_max = base_price * 1000   # 1000x base price
+                                            
+                                            if not (np.all(read_data > reasonable_min) and np.all(read_data < reasonable_max)):
+                                                print(f"        ❌ {field}: Values outside reasonable range [{reasonable_min}, {reasonable_max}]")
+                                                validation_passed = False
+                                else:
+                                    print(f"        ❌ {field}: Binary file not found")
+                                    validation_passed = False
+                            
+                            if validation_passed:
+                                print(f"        ✅ {scenario['name']}: All validation checks passed")
+                                success_count += 1
+                            else:
+                                print(f"        ❌ {scenario['name']}: Validation failed")
+                        
+                        except ImportError as e:
+                            print(f"        ❌ {scenario['name']}: Import Error - {e}")
+                            print(f"        Current sys.path: {sys.path[:3]}")
+                            # success_count += 1  # Don't count as success if we can't test
+                        except Exception as e:
+                            print(f"        ❌ {scenario['name']}: Unexpected Error - {e}")
+                            import traceback
+                            traceback.print_exc()
+                    
+                    except Exception as e:
+                        print(f"        ❌ {scenario['name']}: Error - {e}")
+                
+                print(f"    📊 Write-Read Consistency Results: {success_count}/{len(test_scenarios)} scenarios passed")
+                
+                # Test passes if more than 75% of scenarios succeed
+                return success_count >= len(test_scenarios) * 0.75
+                
+        except Exception as e:
+            print(f"    ❌ Write-read consistency error: {e}")
             return False
     
     def _test_multi_exchange(self) -> bool:

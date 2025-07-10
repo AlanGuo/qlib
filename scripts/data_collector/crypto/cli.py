@@ -847,36 +847,13 @@ Examples:
     def _load_binary_field(self, file_path):
         """Load a single binary field file using our storage format."""
         try:
-            import struct
             import numpy as np
             
-            with open(file_path, 'rb') as f:
-                data = f.read()
+            # Storage manager writes data directly as float64 without header
+            # Load directly using numpy
+            data_array = np.fromfile(file_path, dtype=np.float64)
             
-            # Our storage format: first 4 bytes are record count (unsigned int), followed by data
-            if len(data) < 8:  # Need at least count + one data point
-                return np.array([])
-            
-            # Read first 4 bytes as record count (unsigned int)
-            record_count = struct.unpack('<I', data[:4])[0]
-            
-            # Read remaining bytes as data values (float32)
-            data_bytes = data[4:]
-            expected_data_size = record_count * 4  # 4 bytes per float32
-            
-            if len(data_bytes) < expected_data_size:
-                print(f"Warning: Data size mismatch in {file_path}. Expected {expected_data_size}, got {len(data_bytes)}")
-                # Use actual available data
-                num_values = len(data_bytes) // 4
-            else:
-                num_values = record_count
-            
-            if num_values == 0:
-                return np.array([])
-            
-            values = struct.unpack(f'<{num_values}f', data_bytes[:num_values*4])
-            
-            return np.array(values)
+            return data_array
             
         except Exception as e:
             print(f"Error loading binary field {file_path}: {e}")
