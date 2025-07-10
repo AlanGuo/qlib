@@ -14,73 +14,14 @@
 
 ## 📊 第一阶段：历史数据收集（2-3天）
 
-## ⚠️ **重要更新：模板名称修正**
+## ✅ **自定义模板配置**
 
-**问题发现**：CLI参数中的模板选择列表是硬编码的，不包含 `btcdom2_core` 和 `btcdom2` 模板。
+**模板可用性确认**：CLI已支持自定义模板 `btcdom2_core` 和 `btcdom2`，通过文件模板系统自动发现。
 
-**立即解决方案**：
-
-### 方案A：使用现有模板（推荐）
-
-**步骤1: 收集核心币种（使用default模板 + 手动指定币种）**
-```bash
-# 在项目根目录执行，使用模块化调用
-cd /Users/alanguo/Projects/qlib
-
-# 使用default模板收集8个核心币种
-python -m scripts.data_collector.crypto collect \
-    --template default \
-    --symbols BTC/USDT ETH/USDT LTC/USDT XRP/USDT BCH/USDT EOS/USDT TRX/USDT DOGE/USDT \
-    --start-date 2020-01-01 \
-    --end-date 2024-12-31 \
-    --output-dir ./crypto_data/core
-```
-
-**步骤2: 收集扩展币种（使用production模板）**
-```bash
-# 使用production模板收集更多币种
-python -m scripts.data_collector.crypto collect \
-    --template production \
-    --start-date 2020-01-01 \
-    --end-date 2024-12-31 \
-    --output-dir ./crypto_data/extended
-```
-
-**步骤3: 收集期货数据**
-```bash
-# 收集期货数据和资金费率
-python -m scripts.data_collector.crypto collect \
-    --template production \
-    --start-date 2020-01-01 \
-    --end-date 2024-12-31 \
-    --output-dir ./crypto_data/futures \
-    --fields open high low close volume funding_rate open_interest
-```
-
-### 方案B：修复CLI限制（高级用户）
-
-如果您希望使用原有的 `btcdom2_core` 和 `btcdom2` 模板，需要修改CLI代码：
-
-```python
-# 修改 scripts/data_collector/crypto/cli.py 第139行附近
-# 原有代码：
-collect_parser.add_argument(
-    '--template',
-    type=str,
-    choices=['default', 'production', 'research', 'high_frequency', 'simple', 'multi_exchange'],
-    # ...
-)
-
-# 修改为：
-collect_parser.add_argument(
-    '--template',
-    type=str,
-    choices=['default', 'production', 'research', 'high_frequency', 'simple', 'multi_exchange', 'btcdom2', 'btcdom2_core'],
-    # ...
-)
-```
-
-**修改后原有命令就可以正常使用了**。
+**模板验证结果**：
+- ✅ `btcdom2_core` - 8个核心币种专用配置
+- ✅ `btcdom2` - 动态发现40-60个币种的完整配置
+- ✅ 两个模板都已通过验证
 
 ---
 
@@ -137,7 +78,7 @@ mkdir -p crypto_data/{core,extended,futures}
 
 ### 1.3 分步数据收集执行命令
 
-**核心币种 + 动态扩展策略（零代码修改，推荐方案）**
+**自定义模板策略（推荐方案）**
 
 **步骤1: 收集核心币种（确保基础数据）**
 ```bash
@@ -173,25 +114,17 @@ python -m scripts.data_collector.crypto collect \
 - ✅ **配置化管理**：两个template便于维护和修改
 - ✅ **零代码修改**：使用现有功能组合实现
 
-**步骤3: 收集期货数据（用于做空和资金费率）**
-```bash
-# 收集期货数据和资金费率
-python -m scripts.data_collector.crypto collect \
-    --template production \
-    --start-date 2020-01-01 \
-    --end-date 2024-12-31 \
-    --output-dir ./crypto_data/futures \
-    --fields open high low close volume funding_rate open_interest
-```
+**期货数据说明**：
+`btcdom2` 模板已包含期货数据收集配置，包括 `funding_rate` 和 `open_interest` 字段，无需单独收集。
 
 ---
 
-## 🚀 **更便利的执行方案：一键脚本（可选）**
+## 🚀 **一键执行脚本**
 
-**如果您希望更简单的执行方式，可以创建一个一键脚本**：
+**使用自定义模板的简化执行脚本**：
 
 ```bash
-# 创建一个便利脚本
+# 创建一键脚本
 cat > collect_btcdom2_data.sh << 'EOF'
 #!/bin/bash
 set -e
@@ -202,23 +135,19 @@ echo "🚀 BtcDom2 策略数据收集开始..."
 cd /Users/alanguo/Projects/qlib
 
 # 创建输出目录
-mkdir -p crypto_data/{core,extended,futures}
+mkdir -p crypto_data/{core,extended}
 
 # 收集核心币种
-echo "📊 步骤 1/4: 收集核心币种..."
-python -m scripts.data_collector.crypto collect --template default --symbols BTC/USDT ETH/USDT LTC/USDT XRP/USDT BCH/USDT EOS/USDT TRX/USDT DOGE/USDT --start-date 2020-01-01 --end-date 2024-12-31 --output-dir ./crypto_data/core
+echo "📊 步骤 1/3: 收集核心币种..."
+python -m scripts.data_collector.crypto collect --template btcdom2_core --start-date 2020-01-01 --end-date 2024-12-31 --output-dir ./crypto_data/core
 
-# 收集扩展币种
-echo "🔍 步骤 2/4: 收集扩展币种..."
-python -m scripts.data_collector.crypto collect --template production --start-date 2020-01-01 --end-date 2024-12-31 --output-dir ./crypto_data/extended
-
-# 收集期货数据
-echo "💹 步骤 3/4: 收集期货数据..."
-python -m scripts.data_collector.crypto collect --template production --start-date 2020-01-01 --end-date 2024-12-31 --output-dir ./crypto_data/futures --fields open high low close volume funding_rate open_interest
+# 收集扩展币种（包含期货数据）
+echo "🔍 步骤 2/3: 收集扩展币种和期货数据..."
+python -m scripts.data_collector.crypto collect --template btcdom2 --start-date 2020-01-01 --end-date 2024-12-31 --output-dir ./crypto_data/extended
 
 # 数据验证
-echo "✅ 步骤 4/4: 数据验证..."
-python -m scripts.data_collector.crypto validate --output-dir ./crypto_data --enable-validation --start-date 2020-01-01 --end-date 2024-12-31
+echo "✅ 步骤 3/3: 数据验证..."
+python -m scripts.data_collector.crypto validate --data-dir ./crypto_data/core --verbose
 
 echo "🎉 BtcDom2 数据收集完成！"
 echo "📊 数据统计信息："
@@ -233,38 +162,9 @@ chmod +x collect_btcdom2_data.sh
 ```
 
 **优点**：
-- ✅ **一键执行**：一个命令完成所有数据收集
-- ✅ **进度显示**：实时显示执行进度
-- ✅ **错误处理**：遇到错误自动停止
-- ✅ **统计信息**：完成后自动显示数据统计
-
----
-
-## 📊 **方案对比和选择建议**
-
-| **方案** | **优点** | **适用场景** |
-|-----------|-----------|-------------|
-| **模块化执行** | 简洁、标准、灵活 | 需要逐步调试、参数修改 |
-| **一键脚本** | 方便、自动化、带进度 | 一次性完成所有数据收集 |
-
-**推荐策略**：
-- 🔧 **调试阶段**：使用模块化执行，逐步测试和验证
-- 🚀 **正式收集**：使用一键脚本，高效完成所有数据收集
-
----
-
-## 🔧 **附加选项：CLI参数扩展建议（不推荐）**
-
-如果您希望扩展CLI参数功能，可以在 `scripts/data_collector/crypto/cli.py` 中添加：
-
-```python
-# 在 _add_collect_parser 方法中添加
-collect_parser.add_argument('--min-volume', type=int, help='Minimum daily volume (USDT)')
-collect_parser.add_argument('--max-symbols', type=int, help='Maximum number of symbols to collect')
-collect_parser.add_argument('--core-symbols', nargs='+', help='Core symbols to always include')
-```
-
-**但我们强烈推荐使用配置文件方案，因为它已经完全满足需求。**
+- ✅ **使用专门配置**：完全匹配策略需求
+- ✅ **简化流程**：3步完成所有数据收集
+- ✅ **自动验证**：内置数据质量检查
 
 ---
 
@@ -272,10 +172,8 @@ collect_parser.add_argument('--core-symbols', nargs='+', help='Core symbols to a
 ```bash
 # 验证数据完整性和质量
 python -m scripts.data_collector.crypto validate \
-    --output-dir ./crypto_data \
-    --enable-validation \
-    --start-date 2020-01-01 \
-    --end-date 2024-12-31
+    --data-dir ./crypto_data/core \
+    --verbose
 
 # 检查数据统计信息
 python -m scripts.data_collector.crypto info \
