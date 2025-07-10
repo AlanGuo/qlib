@@ -776,7 +776,7 @@ Examples:
         
         # Look for timeframe directories
         for timeframe_dir in data_path.iterdir():
-            if timeframe_dir.is_dir() and timeframe_dir.name in ['1min', '5min', '15min', '30min', '1h', '60min', '1d', '1w', 'day', 'week']:
+            if timeframe_dir.is_dir() and timeframe_dir.name in ['1min', '5min', '15min', '30min', '1h', '1d', '1w']:
                 # Look for features directory
                 features_dir = timeframe_dir / 'features'
                 if features_dir.exists():
@@ -817,8 +817,10 @@ Examples:
             field_data = {}
             
             for field in expected_fields:
+                # With unified naming, simply look for field.timeframe.bin
                 field_file = instrument_dir / f"{field}.{timeframe}.bin"
-                if field_file.exists():
+                
+                if field_file and field_file.exists():
                     # Load binary data
                     field_data[field] = self._load_binary_field(field_file)
             
@@ -843,7 +845,7 @@ Examples:
             return None
     
     def _load_binary_field(self, file_path):
-        """Load a single binary field file using Qlib's format."""
+        """Load a single binary field file using our storage format."""
         try:
             import struct
             import numpy as np
@@ -851,17 +853,28 @@ Examples:
             with open(file_path, 'rb') as f:
                 data = f.read()
             
-            # Qlib binary format: first 4 bytes are the start index, followed by data
-            if len(data) < 8:  # Need at least index + one data point
+            # Our storage format: first 4 bytes are record count (unsigned int), followed by data
+            if len(data) < 8:  # Need at least count + one data point
                 return np.array([])
             
-            # Read first 4 bytes as start index (float32)
-            start_index = struct.unpack('<f', data[:4])[0]
+            # Read first 4 bytes as record count (unsigned int)
+            record_count = struct.unpack('<I', data[:4])[0]
             
             # Read remaining bytes as data values (float32)
             data_bytes = data[4:]
-            num_values = len(data_bytes) // 4
-            values = struct.unpack(f'<{num_values}f', data_bytes)
+            expected_data_size = record_count * 4  # 4 bytes per float32
+            
+            if len(data_bytes) < expected_data_size:
+                print(f"Warning: Data size mismatch in {file_path}. Expected {expected_data_size}, got {len(data_bytes)}")
+                # Use actual available data
+                num_values = len(data_bytes) // 4
+            else:
+                num_values = record_count
+            
+            if num_values == 0:
+                return np.array([])
+            
+            values = struct.unpack(f'<{num_values}f', data_bytes[:num_values*4])
             
             return np.array(values)
             

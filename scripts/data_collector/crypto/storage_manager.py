@@ -145,32 +145,33 @@ class CryptoStorageManager:
             # Use timeframe directly for both directory and file naming
             # This maintains consistency throughout the storage system
             
+            # Use original timeframe format for directory naming (consistent with design)
+            # But convert for Qlib storage API as documented in boundary specifications
+            
             # BOUNDARY: convert_for_qlib_internal usage - ONLY for Qlib storage API
-            # This is the ONLY place where conversion should happen in storage operations
+            # This conversion is required because FileFeatureStorage expects Qlib format
             qlib_freq = convert_for_qlib_internal(freq)
             
             # Build the correct directory path using original timeframe
             feature_dir = self.data_dir / freq / "features" / instrument
-            feature_file = feature_dir / f"{field}.{qlib_freq}.bin"
+            feature_file = feature_dir / f"{field}.{freq}.bin"  # Use original format for file naming
             
-            # Create storage instance by constructing the path manually
-            # This ensures we use original timeframe directories
-            feature_dir.mkdir(parents=True, exist_ok=True)
+            # Create storage instance for Qlib compatibility
+            # Use original timeframe for directory structure, converted format for API
             
-            # Ensure data is properly sorted by index
-            if not data.index.is_monotonic_increasing:
-                data = data.sort_index()
-            
-            # Convert to numpy array for storage
-            data_array = data.values.astype(np.float32)
+            # Write data using Qlib-compatible storage for better integration
+            # Build the correct provider_uri for this specific frequency
+            freq_provider_uri = {qlib_freq: str(self.data_dir / freq)}
 
-            # Write data directly to the file in qlib binary format
-            # This is simplified binary format compatible with qlib
-            with open(feature_file, 'wb') as f:
-                # Write number of records
-                f.write(struct.pack('I', len(data_array)))
-                # Write data
-                f.write(data_array.tobytes())
+            storage = FileFeatureStorage(
+                instrument=instrument,
+                field=field,
+                freq=qlib_freq,  # Use converted format for Qlib API
+                provider_uri=freq_provider_uri
+            )
+            
+            # Store data through Qlib storage API for compatibility
+            storage._write_data(data)
             
             self.logger.info(f"Saved {len(data)} records for {instrument}.{field}.{freq} to {feature_file}")
             
@@ -269,11 +270,11 @@ class CryptoStorageManager:
             storage = FileFeatureStorage(
                 instrument=instrument,
                 field=field,
-                freq=qlib_freq,
+                freq=qlib_freq,  # Use converted format for Qlib API
                 provider_uri=freq_provider_uri
             )
             
-            # Load all data
+            # Load all data through Qlib storage API for compatibility
             data = storage.data
             
             # Filter by time range if specified

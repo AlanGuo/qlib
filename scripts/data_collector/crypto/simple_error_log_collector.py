@@ -10,10 +10,11 @@ complex delisting detection or lifecycle management.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Union, Set
 import pandas as pd
 import time
+import math
 
 try:
     import ccxt
@@ -229,6 +230,101 @@ class SimpleErrorLogCollector:
                                timeframe: str,
                                start_time: datetime,
                                end_time: datetime) -> pd.DataFrame:
+        """Collect data with pagination support and retry logic."""
+        # Check if we need pagination based on time range
+        total_data = self._collect_data_with_pagination(adapter, symbol, timeframe, start_time, end_time)
+        return total_data
+    
+    def _collect_data_with_pagination(self,
+                                    adapter: ExchangeAdapter,
+                                    symbol: str,
+                                    timeframe: str,
+                                    start_time: datetime,
+                                    end_time: datetime) -> pd.DataFrame:
+        """Collect data with automatic pagination for large time ranges."""
+        # Calculate timeframe duration in hours
+        timeframe_hours = self._get_timeframe_hours(timeframe)
+        
+        # Calculate total time range in hours
+        total_hours = (end_time - start_time).total_seconds() / 3600
+        
+        # Estimate number of data points needed
+        estimated_points = int(total_hours / timeframe_hours)
+        
+        # API limit per request (conservative estimate)
+        max_points_per_request = 1000
+        
+        if estimated_points <= max_points_per_request:
+            # Single request is sufficient
+            logger.debug(f"Single request sufficient for {symbol} ({estimated_points} points)")
+            return self._collect_single_batch_with_retry(adapter, symbol, timeframe, start_time, end_time)
+        else:
+            # Need pagination
+            num_batches = math.ceil(estimated_points / max_points_per_request)
+            logger.info(f"Pagination required for {symbol}: {estimated_points} points, {num_batches} batches")
+            
+            all_data = []
+            current_start = start_time
+            
+            for batch_num in range(num_batches):
+                # Calculate end time for this batch
+                batch_duration = timedelta(hours=timeframe_hours * max_points_per_request)
+                current_end = min(current_start + batch_duration, end_time)
+                
+                logger.debug(f"Fetching batch {batch_num + 1}/{num_batches} for {symbol}: {current_start} to {current_end}")
+                
+                # Collect data for this batch
+                batch_data = self._collect_single_batch_with_retry(
+                    adapter, symbol, timeframe, current_start, current_end
+                )
+                
+                if not batch_data.empty:
+                    all_data.append(batch_data)
+                    
+                    # Update start time for next batch (avoid overlap)
+                    if not batch_data.empty:
+                        last_timestamp = batch_data.index[-1]
+                        current_start = last_timestamp + timedelta(hours=timeframe_hours)
+                    else:
+                        current_start = current_end
+                else:
+                    # If no data in this batch, move to next time range
+                    current_start = current_end
+                
+                # Break if we've reached the end time
+                if current_start >= end_time:
+                    break
+                
+                # Small delay between requests to be respectful to API
+                time.sleep(0.1)
+            
+            # Combine all data
+            if all_data:
+                combined_data = pd.concat(all_data, axis=0)
+                # Remove duplicates and sort by timestamp
+                combined_data = combined_data[~combined_data.index.duplicated(keep='first')]
+                combined_data = combined_data.sort_index()
+                logger.info(f"Combined {len(all_data)} batches into {len(combined_data)} records for {symbol}")
+                return combined_data
+            else:
+                logger.warning(f"No data collected across all batches for {symbol}")
+                return pd.DataFrame()
+    
+    def _get_timeframe_hours(self, timeframe: str) -> float:
+        """Convert timeframe string to hours."""
+        timeframe_map = {
+            '1m': 1/60, '5m': 5/60, '15m': 15/60, '30m': 30/60,
+            '1h': 1, '2h': 2, '4h': 4, '6h': 6, '8h': 8, '12h': 12,
+            '1d': 24, '3d': 72, '1w': 168, '1M': 720  # Approximate for month
+        }
+        return timeframe_map.get(timeframe, 1)  # Default to 1 hour if unknown
+    
+    def _collect_single_batch_with_retry(self,
+                                       adapter: ExchangeAdapter,
+                                       symbol: str,
+                                       timeframe: str,
+                                       start_time: datetime,
+                                       end_time: datetime) -> pd.DataFrame:
         """Collect data with retry logic and smart error handling."""
         last_exception = None
         
