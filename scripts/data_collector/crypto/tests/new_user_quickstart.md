@@ -41,7 +41,7 @@ pytest --version  # 应该显示pytest版本
 pytest unit/test_crypto_alpha_factors.py -v
 
 # 测试2：集成测试（快速功能测试）
-pytest integration/test_basic_functionality.py -v
+pytest integration/test_cli_functions.py -v
 
 # 测试3：检查所有测试数量
 pytest --collect-only -q | wc -l
@@ -62,14 +62,8 @@ pytest live/ -v -m live
 
 ## 🏃 可执行脚本测试
 ```bash
-# 返回crypto目录
-cd ..
-
 # 运行综合测试
 python runners/run_comprehensive_live_test.py
-
-# 返回测试目录
-cd tests
 ```
 
 ## ❗ 遇到问题？
