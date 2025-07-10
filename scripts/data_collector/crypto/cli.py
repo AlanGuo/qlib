@@ -128,6 +128,9 @@ Examples:
         # Incremental update commands
         self._add_incremental_parser(subparsers)
 
+        # Info commands
+        self._add_info_parser(subparsers)
+
         return parser
     
     def _add_collect_parser(self, subparsers):
@@ -413,6 +416,55 @@ Examples:
             help='Confirm the reset operation'
         )
 
+    def _add_info_parser(self, subparsers):
+        """Add info commands for data statistics."""
+        info_parser = subparsers.add_parser(
+            'info',
+            help='Show data statistics and information',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="""
+Examples:
+  # Show data statistics for output directory
+  python cli.py info --output-dir ./crypto_data
+
+  # Show detailed statistics with file breakdown
+  python cli.py info --output-dir ./crypto_data --detailed
+
+  # Show statistics for specific timeframe
+  python cli.py info --output-dir ./crypto_data --timeframe 1d
+
+  # Show statistics in JSON format
+  python cli.py info --output-dir ./crypto_data --format json
+            """
+        )
+
+        info_parser.add_argument(
+            '--output-dir',
+            type=str,
+            required=True,
+            help='Data directory to analyze'
+        )
+
+        info_parser.add_argument(
+            '--timeframe',
+            type=str,
+            choices=['1min', '5min', '15min', '30min', '1h', '1d'],
+            help='Show statistics for specific timeframe only'
+        )
+
+        info_parser.add_argument(
+            '--detailed',
+            action='store_true',
+            help='Show detailed statistics including per-file breakdown'
+        )
+
+        info_parser.add_argument(
+            '--format',
+            choices=['table', 'json'],
+            default='table',
+            help='Output format for statistics'
+        )
+
     def handle_collect(self, args):
         """Handle the collect command."""
         try:
@@ -649,6 +701,232 @@ Examples:
 
         # Here you would implement the actual reset logic
         print("Incremental state reset completed!")
+
+    def handle_info(self, args):
+        """Handle the info command to show data statistics."""
+        try:
+            from pathlib import Path
+            import json
+            import os
+            
+            data_dir = Path(args.output_dir)
+            if not data_dir.exists():
+                print(f"❌ Data directory does not exist: {args.output_dir}")
+                return
+            
+            print(f"📊 Analyzing data directory: {args.output_dir}")
+            print("=" * 60)
+            
+            # Collect statistics
+            stats = self._collect_data_statistics(data_dir, args.timeframe, args.detailed)
+            
+            if args.format == 'json':
+                print(json.dumps(stats, indent=2, default=str))
+            else:
+                self._print_data_statistics(stats, args.detailed)
+                
+        except Exception as e:
+            print(f"❌ Error analyzing data directory: {e}")
+            
+    def _collect_data_statistics(self, data_dir: Path, specific_timeframe=None, detailed=False):
+        """Collect comprehensive statistics about the data directory."""
+        import os
+        from datetime import datetime
+        
+        stats = {
+            'directory': str(data_dir),
+            'analysis_time': datetime.now().isoformat(),
+            'total_size_bytes': 0,
+            'timeframes': {},
+            'instruments': {},
+            'summary': {
+                'total_files': 0,
+                'total_instruments': 0,
+                'total_timeframes': 0,
+                'date_range': {'earliest': None, 'latest': None}
+            }
+        }
+        
+        # Walk through directory structure
+        for root, dirs, files in os.walk(data_dir):
+            root_path = Path(root)
+            
+            # Skip if this is not a timeframe directory
+            timeframe_name = root_path.name
+            if timeframe_name not in ['1min', '5min', '15min', '30min', '1h', '1d', '1w']:
+                continue
+                
+            # Skip if specific timeframe requested and this doesn't match
+            if specific_timeframe and timeframe_name != specific_timeframe:
+                continue
+                
+            if timeframe_name not in stats['timeframes']:
+                stats['timeframes'][timeframe_name] = {
+                    'instruments': {},
+                    'total_files': 0,
+                    'total_size_bytes': 0
+                }
+            
+            # Look for features directory or instrument directories
+            features_dir = root_path / 'features'
+            if features_dir.exists():
+                instrument_dirs = [d for d in features_dir.iterdir() if d.is_dir()]
+            else:
+                # Direct instrument directories
+                instrument_dirs = [d for d in root_path.iterdir() if d.is_dir() and d.name != 'calendars']
+            
+            for instrument_dir in instrument_dirs:
+                instrument_name = instrument_dir.name
+                
+                if instrument_name not in stats['instruments']:
+                    stats['instruments'][instrument_name] = {
+                        'timeframes': {},
+                        'total_files': 0,
+                        'total_size_bytes': 0
+                    }
+                
+                # Count binary files
+                bin_files = list(instrument_dir.glob('*.bin'))
+                file_count = len(bin_files)
+                
+                if file_count > 0:
+                    stats['timeframes'][timeframe_name]['instruments'][instrument_name] = {
+                        'files': file_count,
+                        'size_bytes': 0
+                    }
+                    
+                    stats['instruments'][instrument_name]['timeframes'][timeframe_name] = {
+                        'files': file_count,
+                        'size_bytes': 0
+                    }
+                    
+                    # Calculate file sizes
+                    for bin_file in bin_files:
+                        try:
+                            file_size = bin_file.stat().st_size
+                            stats['timeframes'][timeframe_name]['instruments'][instrument_name]['size_bytes'] += file_size
+                            stats['instruments'][instrument_name]['timeframes'][timeframe_name]['size_bytes'] += file_size
+                            stats['timeframes'][timeframe_name]['total_size_bytes'] += file_size
+                            stats['instruments'][instrument_name]['total_size_bytes'] += file_size
+                            stats['total_size_bytes'] += file_size
+                            stats['summary']['total_files'] += 1
+                        except OSError:
+                            continue
+                    
+                    stats['timeframes'][timeframe_name]['total_files'] += file_count
+                    stats['instruments'][instrument_name]['total_files'] += file_count
+        
+        # Update summary
+        stats['summary']['total_instruments'] = len(stats['instruments'])
+        stats['summary']['total_timeframes'] = len(stats['timeframes'])
+        
+        # Try to determine date range from calendar files
+        self._update_date_range_from_calendars(data_dir, stats)
+        
+        return stats
+    
+    def _update_date_range_from_calendars(self, data_dir: Path, stats):
+        """Update date range information from calendar files."""
+        try:
+            earliest_date = None
+            latest_date = None
+            
+            # Look for calendar files in timeframe directories
+            for timeframe_dir in data_dir.iterdir():
+                if timeframe_dir.is_dir() and timeframe_dir.name in ['1min', '5min', '15min', '30min', '1h', '1d', '1w']:
+                    calendar_file = timeframe_dir / 'calendars' / f'{timeframe_dir.name}.txt'
+                    if calendar_file.exists():
+                        try:
+                            with open(calendar_file, 'r') as f:
+                                lines = [line.strip() for line in f if line.strip() and '→' in line]
+                                if lines:
+                                    # Parse first and last dates
+                                    first_line = lines[0].split('→')[0].strip()
+                                    last_line = lines[-1].split('→')[0].strip()
+                                    
+                                    from datetime import datetime
+                                    first_date = datetime.strptime(first_line, '%Y-%m-%d')
+                                    last_date = datetime.strptime(last_line, '%Y-%m-%d')
+                                    
+                                    if earliest_date is None or first_date < earliest_date:
+                                        earliest_date = first_date
+                                    if latest_date is None or last_date > latest_date:
+                                        latest_date = last_date
+                        except Exception:
+                            continue
+            
+            if earliest_date and latest_date:
+                stats['summary']['date_range']['earliest'] = earliest_date.strftime('%Y-%m-%d')
+                stats['summary']['date_range']['latest'] = latest_date.strftime('%Y-%m-%d')
+                
+        except Exception:
+            pass
+    
+    def _print_data_statistics(self, stats, detailed=False):
+        """Print statistics in a formatted table."""
+        def format_size(size_bytes):
+            """Format bytes into human readable format."""
+            for unit in ['B', 'KB', 'MB', 'GB']:
+                if size_bytes < 1024.0:
+                    return f"{size_bytes:.1f} {unit}"
+                size_bytes /= 1024.0
+            return f"{size_bytes:.1f} TB"
+        
+        # Summary
+        print("📋 SUMMARY")
+        print("-" * 30)
+        print(f"Total Files:      {stats['summary']['total_files']:,}")
+        print(f"Total Instruments: {stats['summary']['total_instruments']:,}")
+        print(f"Total Timeframes:  {stats['summary']['total_timeframes']:,}")
+        print(f"Total Size:       {format_size(stats['total_size_bytes'])}")
+        
+        if stats['summary']['date_range']['earliest']:
+            print(f"Date Range:       {stats['summary']['date_range']['earliest']} to {stats['summary']['date_range']['latest']}")
+        
+        # Timeframes overview
+        if stats['timeframes']:
+            print(f"\n⏰ TIMEFRAMES ({len(stats['timeframes'])})")
+            print("-" * 50)
+            print(f"{'Timeframe':<12} {'Instruments':<12} {'Files':<8} {'Size':<10}")
+            print("-" * 50)
+            
+            for timeframe, tf_stats in sorted(stats['timeframes'].items()):
+                print(f"{timeframe:<12} {len(tf_stats['instruments']):<12} {tf_stats['total_files']:<8} {format_size(tf_stats['total_size_bytes']):<10}")
+        
+        # Instruments overview
+        if stats['instruments'] and not detailed:
+            print(f"\n🏛️ INSTRUMENTS (Top 10 by size)")
+            print("-" * 50)
+            print(f"{'Instrument':<25} {'Timeframes':<12} {'Files':<8} {'Size':<10}")
+            print("-" * 50)
+            
+            # Sort by size and show top 10
+            sorted_instruments = sorted(
+                stats['instruments'].items(), 
+                key=lambda x: x[1]['total_size_bytes'], 
+                reverse=True
+            )[:10]
+            
+            for instrument, inst_stats in sorted_instruments:
+                print(f"{instrument[:24]:<25} {len(inst_stats['timeframes']):<12} {inst_stats['total_files']:<8} {format_size(inst_stats['total_size_bytes']):<10}")
+            
+            if len(stats['instruments']) > 10:
+                print(f"... and {len(stats['instruments']) - 10} more instruments")
+        
+        # Detailed breakdown
+        if detailed and stats['instruments']:
+            print(f"\n🏛️ DETAILED INSTRUMENTS BREAKDOWN")
+            print("-" * 80)
+            
+            for instrument, inst_stats in sorted(stats['instruments'].items()):
+                print(f"\n{instrument}:")
+                print(f"  Total Size: {format_size(inst_stats['total_size_bytes'])}")
+                print(f"  Timeframes:")
+                
+                for tf, tf_data in sorted(inst_stats['timeframes'].items()):
+                    print(f"    {tf}: {tf_data['files']} files, {format_size(tf_data['size_bytes'])}")
+        
+        print("\n" + "=" * 60)
     
     def _validate_data_directory(self, data_dir: str, verbose: bool = False):
         """Validate data in a directory using the crypto validation framework."""
@@ -1163,6 +1441,8 @@ Examples:
                 self.handle_config(args)
             elif args.command == 'incremental':
                 self.handle_incremental(args)
+            elif args.command == 'info':
+                self.handle_info(args)
             else:
                 print(f"Unknown command: {args.command}")
                 self.parser.print_help()

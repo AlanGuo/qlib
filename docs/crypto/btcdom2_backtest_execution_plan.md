@@ -196,7 +196,7 @@ python -m scripts.data_collector.crypto templates list
 ## 🚀 第二阶段：回测脚本开发（1-2天）
 
 ### 2.1 创建回测脚本
-**文件**: `examples/crypto/btcdom2/btcdom2_backtest.py`
+**文件**: `backtest/crypto/btcdom2/backtest.py`
 
 ### 2.2 配置 Qlib 数据源
 ```python
@@ -251,10 +251,10 @@ STRATEGY_CONFIG = {
 cd /Users/alanguo/Projects/qlib
 
 # 首先创建回测脚本目录
-mkdir -p examples/crypto/btcdom2
+mkdir -p backtest/crypto/btcdom2
 
 # 运行基础回测
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/backtest.py \
     --start-date 2020-01-01 \
     --end-date 2024-12-31 \
     --output-dir ./backtest_results/btcdom2_default \
@@ -264,38 +264,38 @@ python examples/crypto/btcdom2/btcdom2_backtest.py \
 ### 3.2 参数敏感性测试
 ```bash
 # 测试不同重平衡频率
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/btcdom2_backtest.py \
     --rebalance-frequency 4h \
     --output-dir ./backtest_results/btcdom2_4h
 
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/btcdom2_backtest.py \
     --rebalance-frequency 12h \
     --output-dir ./backtest_results/btcdom2_12h
 
 # 测试不同做空币种数量
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/btcdom2_backtest.py \
     --num-short-positions 5 \
     --output-dir ./backtest_results/btcdom2_short5
 
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/btcdom2_backtest.py \
     --num-short-positions 15 \
     --output-dir ./backtest_results/btcdom2_short15
 
 # 测试不同BTC配比
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/btcdom2_backtest.py \
     --btc-spot-ratio 0.3 \
     --output-dir ./backtest_results/btcdom2_btc30
 
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/btcdom2_backtest.py \
     --btc-spot-ratio 0.7 \
     --output-dir ./backtest_results/btcdom2_btc70
 
 # 测试不同候选池大小（如果收集了更多币种）
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/btcdom2_backtest.py \
     --universe-size 30 \
     --output-dir ./backtest_results/btcdom2_universe30
 
-python examples/crypto/btcdom2/btcdom2_backtest.py \
+python backtest/crypto/btcdom2/btcdom2_backtest.py \
     --universe-size 60 \
     --output-dir ./backtest_results/btcdom2_universe60
 ```
