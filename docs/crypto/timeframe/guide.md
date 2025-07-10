@@ -111,19 +111,58 @@ strategies = {
 ### 基本使用
 
 ```python
-from timeframe_manager import TimeframeManager
-
-# 创建管理器
-manager = TimeframeManager()
+from config.timeframes import validate_timeframe, timeframe_to_pandas_freq
 
 # 验证 timeframe 是否支持
-if manager.validate_timeframe("1h"):
+if validate_timeframe("1h"):
     print("1h 是支持的格式")
 
-# 获取多个 timeframes
-timeframes = ["1h", "1d", "invalid"]
-valid_ones = manager.validate_timeframes(timeframes)
-print(f"有效的: {valid_ones}")  # 输出: ['1h', '1d']
+# 获取pandas频率字符串 (新功能)
+pandas_freq = timeframe_to_pandas_freq("1h")
+print(f"Pandas频率: {pandas_freq}")  # 输出: 1h
+
+# 错误处理
+try:
+    freq = timeframe_to_pandas_freq("invalid")
+except ValueError as e:
+    print(f"错误: {e}")
+```
+
+### 数据处理场景
+
+**什么时候使用 `timeframe_to_pandas_freq()`？**
+
+```python
+import pandas as pd
+from config.timeframes import timeframe_to_pandas_freq
+
+# ✅ 场景1: 创建时间序列数据
+timeframe = "1h"
+freq = timeframe_to_pandas_freq(timeframe)
+timestamps = pd.date_range(start="2023-01-01", periods=24, freq=freq)
+
+# ✅ 场景2: 数据重采样
+data.resample(freq).mean()
+
+# ✅ 场景3: 时间序列分析
+data.rolling(window=10).mean()
+
+# ✅ 场景4: 生成测试数据的时间戳
+test_timestamps = pd.date_range(end=pd.Timestamp.now(), periods=100, freq=freq)
+```
+
+**什么时候不使用这个函数？**
+
+```python
+# ❌ 不要用于交易所API调用
+from config.timeframes import get_exchange_timeframe
+api_timeframe = get_exchange_timeframe("binance", "1h")  # 正确的做法
+
+# ❌ 不要用于文件/目录命名
+file_name = f"price_data.{timeframe}.bin"  # 直接使用原始timeframe
+
+# ❌ 不要用于Qlib存储操作
+# (这有专门的内部函数处理)
 ```
 
 ### 数据收集

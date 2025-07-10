@@ -246,34 +246,38 @@ class QlibDataGenerator:
 
             # Normalize start_date based on frequency to ensure proper alignment
             # Simple calendar generation based on frequency
+            # Time alignment logic for different frequencies
+            # Each frequency requires specific alignment for proper calendar generation
             if freq == "1d":
                 aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
             elif freq == "1h":
                 aligned_start = start_date.replace(minute=0, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='h')
             elif freq == "5min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 5) * 5, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='5min')
             elif freq == "1min":
                 aligned_start = start_date.replace(second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='min')
             elif freq == "15min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 15) * 15, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='15min')
             elif freq == "30min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 30) * 30, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='30min')
             elif freq == "1w":
                 aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
                 days_since_monday = aligned_start.weekday()
                 aligned_start = aligned_start - timedelta(days=days_since_monday)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='W')
             else:
-                # Fallback to daily
+                # Fallback to daily alignment
                 aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                self.logger.warning(f"Unknown frequency {freq}, using daily alignment")
+            
+            # Generate calendar using unified pandas frequency conversion
+            try:
+                from config.timeframes import timeframe_to_pandas_freq
+                pandas_freq = timeframe_to_pandas_freq(freq)
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq=pandas_freq)
+            except (ValueError, ImportError) as e:
+                # Fallback to daily calendar if timeframe conversion fails
+                self.logger.warning(f"Failed to convert timeframe {freq} to pandas frequency: {e}")
                 calendar = pd.date_range(start=aligned_start, end=end_date, freq='D')
-                self.logger.warning(f"Unknown frequency {freq}, using daily calendar")
             
             # Create calendar file name using original timeframe format (for user consistency)
             if future:

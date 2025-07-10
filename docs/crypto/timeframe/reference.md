@@ -128,6 +128,61 @@ def convert_for_qlib_internal(timeframe: str) -> str:
     return timeframe    # 其他格式保持不变
 ```
 
+### 4. Pandas频率映射：timeframe_to_pandas_freq
+
+**新增功能**：统一的 pandas 频率转换函数
+
+**使用场景**：
+- ✅ 创建 pandas DatetimeIndex (`pd.date_range()`)
+- ✅ 数据重采样 (`DataFrame.resample()`)  
+- ✅ 时间序列数据处理和分析
+- ✅ 生成合成时间戳用于测试/验证
+- ✅ 日历生成（使用pandas功能时）
+
+**不适用场景**：
+- ❌ Qlib 内部存储操作（使用 `convert_for_qlib_internal` 代替）
+- ❌ 交易所 API 时间框架参数（使用 `EXCHANGE_TIMEFRAME_MAPPING`）
+- ❌ 文件/目录命名（使用原始时间框架字符串）
+
+```python
+def timeframe_to_pandas_freq(timeframe: str) -> str:
+    """
+    将标准时间框架格式转换为 pandas 频率字符串
+    
+    参数
+    ----
+    timeframe : str
+        标准时间框架格式 (如 "1min", "5min", "1h", "1d", "1w")
+        
+    返回
+    ----
+    str
+        Pandas 频率字符串，兼容 pd.date_range(), DataFrame.resample() 等
+        
+    示例
+    ----
+    >>> timeframe_to_pandas_freq("1h")
+    '1h'
+    >>> timeframe_to_pandas_freq("5min")
+    '5min'
+    >>> timeframe_to_pandas_freq("1d")
+    '1D'
+    
+    # 在 pandas 操作中使用:
+    >>> freq = timeframe_to_pandas_freq("1h")
+    >>> timestamps = pd.date_range(start="2023-01-01", periods=24, freq=freq)
+    >>> data.resample(freq).mean()
+    """
+```
+
+**与其他函数的区别**：
+
+| 函数 | 用途 | 输入示例 | 输出示例 | 使用边界 |
+|------|------|----------|----------|----------|
+| `timeframe_to_pandas_freq()` | pandas数据处理 | "1h" | "1h" | pandas操作 |
+| `convert_for_qlib_internal()` | Qlib存储API | "1h" | "60min" | 仅存储层 |
+| `get_exchange_timeframe()` | 交易所API | "1h" | "1h"(Binance) | 数据收集 |
+
 **在存储管理器中的正确使用**：
 
 ```python
@@ -233,7 +288,7 @@ def get_exchange_timeframe(exchange: str, timeframe: str) -> str:
 ### 基本验证和转换
 
 ```python
-from config.timeframes import validate_timeframe, get_exchange_timeframe
+from config.timeframes import validate_timeframe, get_exchange_timeframe, timeframe_to_pandas_freq
 
 # 验证单个timeframe
 print(validate_timeframe("1h"))     # True
@@ -253,6 +308,63 @@ print(f"OKX 1h: {okx_1h}")  # 输出: 1h
 
 okx_1d = get_exchange_timeframe("okx", "1d")
 print(f"OKX 1d: {okx_1d}")  # 输出: 1d
+
+# Pandas 频率转换 (新增功能)
+pandas_1h = timeframe_to_pandas_freq("1h")
+print(f"Pandas 1h: {pandas_1h}")  # 输出: 1h
+
+pandas_5min = timeframe_to_pandas_freq("5min")
+print(f"Pandas 5min: {pandas_5min}")  # 输出: 5min
+```
+
+### Pandas 数据处理示例
+
+```python
+import pandas as pd
+from config.timeframes import timeframe_to_pandas_freq
+
+# 创建时间序列数据
+timeframe = "1h"
+freq = timeframe_to_pandas_freq(timeframe)
+
+# 生成时间戳
+timestamps = pd.date_range(
+    start="2023-01-01", 
+    end="2023-01-02", 
+    freq=freq
+)
+print(f"生成了 {len(timestamps)} 个 {timeframe} 时间戳")
+
+# 创建示例数据
+import numpy as np
+data = pd.DataFrame({
+    'price': np.random.randn(len(timestamps)) + 100,
+    'volume': np.random.randint(1000, 5000, len(timestamps))
+}, index=timestamps)
+
+# 数据重采样 - 从小时数据生成日数据
+daily_freq = timeframe_to_pandas_freq("1d")
+daily_data = data.resample(daily_freq).agg({
+    'price': 'mean',
+    'volume': 'sum'
+})
+
+print(f"原始数据: {len(data)} 条记录")
+print(f"重采样后: {len(daily_data)} 条记录")
+
+# 数据验证中的时间戳生成
+def generate_test_timestamps(timeframe: str, num_records: int):
+    """为数据验证生成测试时间戳"""
+    freq = timeframe_to_pandas_freq(timeframe)
+    return pd.date_range(
+        end=pd.Timestamp.now().normalize(),
+        periods=num_records,
+        freq=freq
+    )
+
+# 使用示例
+test_timestamps = generate_test_timestamps("1h", 100)
+print(f"生成了 100 个小时级别的测试时间戳")
 ```
 
 ### 使用 TimeframeManager

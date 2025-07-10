@@ -887,20 +887,10 @@ Examples:
         try:
             from datetime import datetime
             import pandas as pd
+            from config.timeframes import timeframe_to_pandas_freq
             
-            # Map timeframe to pandas frequency
-            freq_map = {
-                '1min': '1min',
-                '5min': '5min',
-                '15min': '15min',
-                '30min': '30min',
-                '1h': '1h',
-                '60min': '1h',
-                'day': '1D',
-                'week': '1W'
-            }
-            
-            freq = freq_map.get(timeframe, '1D')
+            # Map timeframe to pandas frequency using unified function
+            freq = timeframe_to_pandas_freq(timeframe)
             
             # Start from a recent date and go backwards
             end_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)

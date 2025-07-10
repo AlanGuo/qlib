@@ -278,3 +278,96 @@ def _validate_qlib_internal_usage():
         pass
     finally:
         del frame
+
+
+def timeframe_to_pandas_freq(timeframe: str) -> str:
+    """
+    Convert standard timeframe format to pandas frequency string.
+    
+    This function provides unified timeframe-to-pandas-frequency conversion for all
+    pandas data processing operations in the crypto data collector. It should be used
+    whenever you need to create pandas date ranges, resample data, or perform any
+    pandas time-series operations.
+    
+    USAGE BOUNDARIES:
+    ================
+    APPROPRIATE USAGE:
+    - Creating pandas DatetimeIndex with pd.date_range()
+    - Data resampling with DataFrame.resample()
+    - Time series data processing and analysis
+    - Generating synthetic timestamps for testing/validation
+    - Calendar generation when using pandas functionality
+    
+    NOT RECOMMENDED FOR:
+    - Qlib internal storage operations (use convert_for_qlib_internal instead)
+    - Exchange API timeframe parameters (use EXCHANGE_TIMEFRAME_MAPPING)
+    - File/directory naming (use original timeframe string)
+    
+    DISTINCTION FROM convert_for_qlib_internal():
+    ============================================
+    - timeframe_to_pandas_freq(): For pandas data processing (this function)
+    - convert_for_qlib_internal(): For Qlib storage API only (restricted usage)
+    
+    Parameters
+    ----------
+    timeframe : str
+        Standard timeframe format (e.g., "1min", "5min", "1h", "1d", "1w")
+        Must be one of the timeframes defined in TIMEFRAME_MAPPING
+        
+    Returns
+    -------
+    str
+        Pandas frequency string compatible with pd.date_range(), DataFrame.resample(), etc.
+        
+    Raises
+    ------
+    ValueError
+        If timeframe is not supported or invalid
+        
+    Examples
+    --------
+    >>> timeframe_to_pandas_freq("1h")
+    '1h'
+    >>> timeframe_to_pandas_freq("5min") 
+    '5min'
+    >>> timeframe_to_pandas_freq("1d")
+    '1D'
+    
+    # Usage in pandas operations:
+    >>> freq = timeframe_to_pandas_freq("1h")
+    >>> timestamps = pd.date_range(start="2023-01-01", periods=24, freq=freq)
+    >>> data.resample(freq).mean()
+    
+    Notes
+    -----
+    This function uses standard pandas frequency conventions:
+    - Minutes: 'min' (e.g., '1min', '5min', '15min', '30min')
+    - Hours: 'h' (e.g., '1h')  
+    - Days: 'D' (e.g., '1D')
+    - Weeks: 'W' (e.g., '1W')
+    
+    The mapping follows pandas documentation recommendations and ensures
+    compatibility with all pandas time-series functionality.
+    """
+    # Validate input timeframe
+    if not validate_timeframe(timeframe):
+        raise ValueError(f"Invalid timeframe: {timeframe}. Must be one of {list(TIMEFRAME_MAPPING.keys())}")
+    
+    # Standard pandas frequency mapping following pandas conventions
+    # Reference: https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases
+    PANDAS_FREQ_MAPPING = {
+        "1min": "1min",   # min = minute (T is deprecated)
+        "5min": "5min", 
+        "15min": "15min",
+        "30min": "30min",
+        "1h": "1h",       # h = hour (lowercase to avoid deprecation warning)
+        "1d": "1D",       # D = day
+        "1w": "1W",       # W = week
+    }
+    
+    pandas_freq = PANDAS_FREQ_MAPPING.get(timeframe)
+    if pandas_freq is None:
+        # This should not happen if validate_timeframe passed, but provide fallback
+        raise ValueError(f"No pandas frequency mapping found for timeframe: {timeframe}")
+    
+    return pandas_freq
