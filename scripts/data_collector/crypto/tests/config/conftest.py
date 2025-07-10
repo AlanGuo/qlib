@@ -27,22 +27,10 @@ def pytest_configure(config):
         "markers", "slow: mark test as slow running"
     )
     config.addinivalue_line(
-        "markers", "fast: mark test as fast running unit test"
-    )
-    config.addinivalue_line(
-        "markers", "unit: mark test as unit test"
-    )
-    config.addinivalue_line(
         "markers", "integration: mark test as integration test"
     )
     config.addinivalue_line(
         "markers", "validation: mark test as data validation test"
-    )
-    config.addinivalue_line(
-        "markers", "smoke: mark test as smoke test for quick validation"
-    )
-    config.addinivalue_line(
-        "markers", "crypto_data: mark test as crypto data related"
     )
 
 def pytest_collection_modifyitems(config, items):
@@ -54,21 +42,12 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.live)
         
         # Add slow marker to slow tests
-        if "large_batch" in item.name or "integration" in item.name or "performance" in item.module.__name__:
+        if "large_batch" in item.name or "integration" in item.name:
             item.add_marker(pytest.mark.slow)
         
         # Add validation marker to validation tests
         if "validation" in item.module.__name__ or "validate" in item.name:
             item.add_marker(pytest.mark.validation)
-        
-        # Add unit marker to unit tests
-        if "unit" in item.module.__name__:
-            item.add_marker(pytest.mark.unit)
-            item.add_marker(pytest.mark.fast)
-        
-        # Add integration marker to integration tests
-        if "integration" in item.module.__name__:
-            item.add_marker(pytest.mark.integration)
 
 @pytest.fixture(scope="session")
 def test_config():
@@ -79,16 +58,4 @@ def test_config():
         "test_symbols": ["BTC/USDT", "ETH/USDT"],
         "test_timeframes": ["1h", "1d"],
         "test_exchanges": ["binance", "okx"]
-    }
-
-@pytest.fixture(scope="session")
-def proxy_config():
-    """Proxy configuration fixture for live tests"""
-    return {
-        'http_proxy': 'http://127.0.0.1:10808',
-        'https_proxy': 'http://127.0.0.1:10808',
-        'all_proxy': 'socks5://127.0.0.1:10808',
-        'HTTP_PROXY': 'http://127.0.0.1:10808',
-        'HTTPS_PROXY': 'http://127.0.0.1:10808',
-        'ALL_PROXY': 'socks5://127.0.0.1:10808'
     }

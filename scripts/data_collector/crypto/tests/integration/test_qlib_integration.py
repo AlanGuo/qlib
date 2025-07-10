@@ -67,7 +67,7 @@ class TestQlibIntegration:
         dates = pd.date_range(
             start='2023-01-01', 
             end='2023-01-30', 
-            freq='1H'
+            freq='1h'
         )
         
         np.random.seed(42)  # For reproducible test data

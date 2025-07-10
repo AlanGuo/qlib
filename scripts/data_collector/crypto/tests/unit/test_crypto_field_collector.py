@@ -12,9 +12,11 @@ open interest, order book data, and other crypto-specific field collection.
 import pytest
 import sys
 from pathlib import Path
-_current_dir = Path(__file__).parent
-if str(_current_dir.parent) not in sys.path:
-    sys.path.insert(0, str(_current_dir.parent))
+
+# Add the crypto directory to Python path  
+crypto_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(crypto_dir))
+
 import tempfile
 import shutil
 from pathlib import Path

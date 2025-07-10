@@ -12,9 +12,11 @@ directory management, and data format conversions using temporary directories.
 import pytest
 import sys
 from pathlib import Path
-_current_dir = Path(__file__).parent
-if str(_current_dir.parent) not in sys.path:
-    sys.path.insert(0, str(_current_dir.parent))
+
+# Add the crypto directory to Python path  
+crypto_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(crypto_dir))
+
 import tempfile
 import shutil
 import os
@@ -41,7 +43,7 @@ def temp_storage_dir():
 @pytest.fixture
 def sample_ohlcv_data():
     """Sample OHLCV data for testing."""
-    dates = pd.date_range(start='2022-01-01', end='2022-01-03', freq='1H')
+    dates = pd.date_range(start='2022-01-01', end='2022-01-03', freq='1h')
     data = {
         'timestamp': dates,
         'open': np.random.uniform(45000, 47000, len(dates)),
@@ -55,7 +57,7 @@ def sample_ohlcv_data():
 @pytest.fixture
 def sample_crypto_fields_data():
     """Sample crypto-specific fields data for testing."""
-    dates = pd.date_range(start='2022-01-01', end='2022-01-03', freq='8H')
+    dates = pd.date_range(start='2022-01-01', end='2022-01-03', freq='8h')
     data = {
         'timestamp': dates,
         'funding_rate': np.random.uniform(-0.001, 0.001, len(dates)),
@@ -300,44 +302,44 @@ class TestStorageManagerUtilityFunctions:
     def test_convert_to_qlib_freq_function(self):
         """Test the convert_for_qlib_internal utility function."""
         from config.timeframes import convert_for_qlib_internal
+        import pytest
         
         # Test common timeframe conversions to qlib-compatible format
         assert convert_for_qlib_internal("1min") == "1min"
         assert convert_for_qlib_internal("5min") == "5min"
         assert convert_for_qlib_internal("1h") == "60min"    # qlib expects minutes format
         assert convert_for_qlib_internal("1d") == "1d"       # qlib d format
-        assert convert_for_qlib_internal("1w") == "1w"       # qlib w format
+        assert convert_for_qlib_internal("1w") == "1w"       # qlib w format (1w is supported)
         
-        # Test unknown timeframe (should return as-is)
-        assert convert_for_qlib_internal("unknown") == "unknown"
+        # Test invalid timeframe (should raise ValueError due to boundary checking)
+        with pytest.raises(ValueError, match="Invalid timeframe.*should only be called"):
+            convert_for_qlib_internal("unknown")
     
     def test_timeframe_conversion_edge_cases(self):
         """Test edge cases in timeframe conversion."""
         from config.timeframes import convert_for_qlib_internal
+        import pytest
         
-        # Test empty string
-        assert convert_for_qlib_internal("") == ""
+        # Test empty string (should raise ValueError due to boundary checking)
+        with pytest.raises(ValueError, match="Invalid timeframe.*should only be called"):
+            convert_for_qlib_internal("")
         
-        # Test None (should handle gracefully)
-        try:
-            result = convert_for_qlib_internal(None)
-            # If it doesn't raise an exception, that's fine
-        except (TypeError, AttributeError):
-            # If it raises an exception, that's also acceptable
-            pass
+        # Test None (should raise error)
+        with pytest.raises((TypeError, AttributeError, ValueError)):
+            convert_for_qlib_internal(None)
     
     def test_complex_timeframe_conversions(self):
         """Test complex timeframe conversions."""
         from config.timeframes import convert_for_qlib_internal
+        import pytest
         
         # Test our supported standard timeframes
         assert convert_for_qlib_internal("15min") == "15min"
         assert convert_for_qlib_internal("30min") == "30min"
         
-        # Test unsupported formats return as-is
-        result = convert_for_qlib_internal("4h")
-        assert isinstance(result, str)  # Should return as-is
-        assert result == "4h"
+        # Test unsupported format (should raise ValueError due to boundary checking)
+        with pytest.raises(ValueError, match="Invalid timeframe.*should only be called"):
+            convert_for_qlib_internal("4h")
 
 
 if __name__ == "__main__":

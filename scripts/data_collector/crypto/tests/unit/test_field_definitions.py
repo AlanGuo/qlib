@@ -9,9 +9,11 @@ Pytest tests for field definitions and validation.
 import pytest
 import sys
 from pathlib import Path
-_current_dir = Path(__file__).parent
-if str(_current_dir.parent) not in sys.path:
-    sys.path.insert(0, str(_current_dir.parent))
+
+# Add the crypto directory to Python path  
+crypto_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(crypto_dir))
+
 from config.fields import (
     STANDARD_FIELDS, CRYPTO_SPECIFIC_FIELDS, ALL_FIELDS,
     FieldConfig, validate_field, get_field_config,

@@ -100,6 +100,19 @@ def create_default_manager(config, **kwargs):
     Returns:
         IncrementalUpdateManager instance
     """
+    # Import here to avoid circular imports
+    from ..simple_error_log_collector import SimpleErrorLogCollector
+    
+    # Create default error log collector if not provided
+    if 'error_log_collector' not in kwargs:
+        incremental_config = config.incremental
+        kwargs['error_log_collector'] = SimpleErrorLogCollector(
+            max_retries=getattr(incremental_config, 'max_retries', 3),
+            retry_delay=getattr(incremental_config, 'retry_delay', 1.0),
+            enable_smart_logging=getattr(incremental_config, 'enable_smart_logging', True),
+            error_cache_ttl=getattr(incremental_config, 'error_cache_ttl', 24 * 3600)
+        )
+    
     return IncrementalUpdateManager(config, **kwargs)
 
 

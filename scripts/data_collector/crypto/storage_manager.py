@@ -25,6 +25,13 @@ from qlib.utils.time import Freq
 from qlib.utils import get_module_logger
 import qlib
 
+import sys
+from pathlib import Path
+
+# Add the crypto directory to Python path
+crypto_dir = Path(__file__).parent
+sys.path.insert(0, str(crypto_dir))
+
 from config.fields import STANDARD_FIELDS, CRYPTO_SPECIFIC_FIELDS
 from config.timeframes import TIMEFRAME_MAPPING, validate_timeframe, convert_for_qlib_internal
 
@@ -255,11 +262,15 @@ class CryptoStorageManager:
             # This conversion is required because FileFeatureStorage expects Qlib format
             qlib_freq = convert_for_qlib_internal(freq)
 
+            # Build the correct provider_uri for this specific frequency
+            # Qlib expects a dictionary with frequency as key
+            freq_provider_uri = {qlib_freq: str(self.data_dir / freq)}
+
             storage = FileFeatureStorage(
                 instrument=instrument,
                 field=field,
                 freq=qlib_freq,
-                provider_uri=self.provider_uri
+                provider_uri=freq_provider_uri
             )
             
             # Load all data
@@ -473,15 +484,15 @@ class CryptoStorageManager:
             if freq == "1d":
                 calendar = pd.date_range(start=start_date, end=end_date, freq='D')
             elif freq == "1h":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='H')
+                calendar = pd.date_range(start=start_date, end=end_date, freq='h')
             elif freq == "1min":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='T')
+                calendar = pd.date_range(start=start_date, end=end_date, freq='min')
             elif freq == "5min":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='5T')
+                calendar = pd.date_range(start=start_date, end=end_date, freq='5min')
             elif freq == "15min":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='15T')
+                calendar = pd.date_range(start=start_date, end=end_date, freq='15min')
             elif freq == "30min":
-                calendar = pd.date_range(start=start_date, end=end_date, freq='30T')
+                calendar = pd.date_range(start=start_date, end=end_date, freq='30min')
             elif freq == "1w":
                 calendar = pd.date_range(start=start_date, end=end_date, freq='W')
             else:

@@ -974,7 +974,7 @@ Examples:
             config.collection.enable_risk_metrics = True
     
     def _execute_data_collection(self, config: CryptoDataConfig):
-        """Execute the actual data collection process with delisting awareness."""
+        """Execute the actual data collection process with simplified error logging."""
         try:
             # Import required modules
             from crypto_field_collector import CryptoFieldCollector
@@ -982,8 +982,7 @@ Examples:
             from exchange_adapters.okx_adapter import OKXAdapter
             from storage_manager import CryptoStorageManager
             from qlib_data_generator import QlibDataGenerator
-            from symbol_lifecycle import SymbolLifecycleManager
-            from delisting_aware_collector import DelistingAwareCollector
+            from simple_error_log_collector import SimpleErrorLogCollector
             from datetime import datetime, timedelta
             
             # Initialize storage manager
@@ -994,21 +993,13 @@ Examples:
             self.logger.info("Initializing Qlib data generator...")
             qlib_generator = QlibDataGenerator(data_dir=config.collection.output_dir)
             
-            # Initialize symbol lifecycle manager
-            self.logger.info("Initializing symbol lifecycle manager...")
-            lifecycle_manager = SymbolLifecycleManager(
-                storage_dir=f"{config.collection.output_dir}/symbol_lifecycle",
-                cache_ttl=3600,  # 1 hour cache
-                enable_persistence=True
-            )
-            
-            # Initialize delisting-aware collector
-            self.logger.info("Initializing delisting-aware collector...")
-            delisting_collector = DelistingAwareCollector(
-                lifecycle_manager=lifecycle_manager,
+            # Initialize simplified error log collector
+            self.logger.info("Initializing simplified error log collector...")
+            collector = SimpleErrorLogCollector(
                 max_retries=3,
                 retry_delay=1.0,
-                enable_partial_collection=True
+                enable_smart_logging=True,
+                error_cache_ttl=24 * 3600  # 24 hours
             )
             
             # Get symbols to collect
@@ -1062,8 +1053,8 @@ Examples:
                             from config.timeframes import get_exchange_timeframe
                             ccxt_timeframe = get_exchange_timeframe(adapter.exchange_id, timeframe)
                             
-                            # Use delisting-aware collector to collect data for all symbols
-                            batch_results = delisting_collector.collect_multiple_symbols(
+                            # Use simplified collector to collect data for all symbols
+                            batch_results = collector.collect_multiple_symbols(
                                 adapter=adapter,
                                 symbols=symbols,
                                 timeframe=ccxt_timeframe,
@@ -1073,7 +1064,7 @@ Examples:
                             
                             # Process results and store data
                             for symbol, result in batch_results['results'].items():
-                                if result['status'] in ['success', 'partial']:
+                                if result['status'] == 'success':
                                     if not result['data'].empty:
                                         # Store the data using correct method signature
                                         # Convert symbol format: BTC/USDT -> BTCUSDT for instrument name
@@ -1088,29 +1079,16 @@ Examples:
                                             market_type=market_type
                                         )
                                         
-                                        status_emoji = "✅" if result['status'] == 'success' else "⚠️"
-                                        collection_type = result.get('metadata', {}).get('collection_type', 'unknown')
-                                        self.logger.info(f"    {status_emoji} Stored {len(result['data'])} records for {instrument} ({timeframe}, {market_type}) - {collection_type}")
-                                        
-                                        # Log collection windows for partial collections
-                                        if result['status'] == 'partial' and result.get('collection_windows'):
-                                            for window in result['collection_windows']:
-                                                self.logger.info(f"      Window: {window['start']} to {window['end']} ({window['records']} records)")
+                                        status_emoji = "✅"
+                                        self.logger.info(f"    {status_emoji} Stored {len(result['data'])} records for {instrument} ({timeframe}, {market_type})")
                                     else:
                                         self.logger.warning(f"    ⚠️ No data in result for {symbol} {timeframe}")
                                 else:
                                     self.logger.warning(f"    ❌ Failed to collect {symbol} {timeframe}: {result.get('errors', [])}")
                             
                             # Log batch statistics
-                            stats = batch_results['stats']
-                            self.logger.info(f"  Batch statistics: {stats['successful_collections']} successful, "
-                                           f"{stats['partial_collections']} partial, {stats['failed_collections']} failed")
-                            
-                            if stats['delisted_symbols'] > 0:
-                                self.logger.info(f"  Delisted symbols detected: {stats['delisted_symbols']}")
-                            
-                            if stats['suspended_symbols'] > 0:
-                                self.logger.info(f"  Suspended symbols detected: {stats['suspended_symbols']}")
+                            summary = batch_results['summary']
+                            self.logger.info(f"  Batch statistics: {len(summary['successful_symbols'])} successful, {len(summary['failed_symbols'])} failed")
                                 
                         except Exception as e:
                             self.logger.error(f"    ❌ Error collecting timeframe {timeframe}: {e}")
@@ -1224,6 +1202,10 @@ def main():
     """Main entry point."""
     cli = CryptoCLI()
     cli.run()
+
+
+# Create an alias for backward compatibility
+CLI = CryptoCLI
 
 
 if __name__ == "__main__":

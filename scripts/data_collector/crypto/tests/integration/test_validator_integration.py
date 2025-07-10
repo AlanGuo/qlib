@@ -37,7 +37,7 @@ def temp_validation_dir():
 @pytest.fixture
 def valid_ohlcv_data():
     """Valid OHLCV data for testing."""
-    dates = pd.date_range(start='2022-01-01', periods=100, freq='1H')
+    dates = pd.date_range(start='2022-01-01', periods=100, freq='1h')
     base_price = 45000.0
     
     data = pd.DataFrame({
@@ -61,7 +61,7 @@ def valid_ohlcv_data():
 @pytest.fixture
 def invalid_ohlcv_data():
     """Invalid OHLCV data for testing."""
-    dates = pd.date_range(start='2022-01-01', periods=50, freq='1H')
+    dates = pd.date_range(start='2022-01-01', periods=50, freq='1h')
     
     data = pd.DataFrame({
         'timestamp': dates,
@@ -88,7 +88,7 @@ def invalid_ohlcv_data():
 @pytest.fixture
 def crypto_fields_data():
     """Crypto-specific fields data for testing."""
-    dates = pd.date_range(start='2022-01-01', periods=30, freq='8H')
+    dates = pd.date_range(start='2022-01-01', periods=30, freq='8h')
     
     return pd.DataFrame({
         'timestamp': dates,

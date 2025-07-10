@@ -14,8 +14,9 @@ import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-# Add the crypto module to the path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add the crypto directory to Python path  
+crypto_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(crypto_dir))
 
 from config.timeframes import (
     TIMEFRAME_MAPPING,

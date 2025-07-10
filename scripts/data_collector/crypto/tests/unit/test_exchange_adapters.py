@@ -10,6 +10,12 @@ including Binance and OKX adapters with simulated API responses.
 """
 
 import pytest
+import sys
+from pathlib import Path
+
+# Add the crypto directory to Python path  
+crypto_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(crypto_dir))
 
 import json
 import time

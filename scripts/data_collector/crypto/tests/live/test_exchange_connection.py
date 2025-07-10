@@ -13,9 +13,15 @@ import pytest
 import asyncio
 import time
 import os
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 import pandas as pd
+from pathlib import Path
+
+# Add crypto collector to path
+crypto_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(crypto_root))
 
 from exchange_adapters.binance_adapter import BinanceAdapter
 from exchange_adapters.okx_adapter import OKXAdapter

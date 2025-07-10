@@ -18,6 +18,14 @@ import pandas as pd
 from qlib.utils import get_module_logger
 from qlib.data.storage.file_storage import FileInstrumentStorage, FileCalendarStorage
 
+import sys
+import os
+from pathlib import Path
+
+# Add the crypto directory to Python path
+crypto_dir = Path(__file__).parent
+sys.path.insert(0, str(crypto_dir))
+
 from config.timeframes import TIMEFRAME_MAPPING, validate_timeframe, convert_for_qlib_internal
 from config.fields import STANDARD_FIELDS, CRYPTO_SPECIFIC_FIELDS
 from storage_manager import CryptoStorageManager
@@ -246,16 +254,16 @@ class QlibDataGenerator:
                 calendar = pd.date_range(start=aligned_start, end=end_date, freq='h')
             elif freq == "5min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 5) * 5, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='5T')
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='5min')
             elif freq == "1min":
                 aligned_start = start_date.replace(second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='T')
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='min')
             elif freq == "15min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 15) * 15, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='15T')
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='15min')
             elif freq == "30min":
                 aligned_start = start_date.replace(minute=(start_date.minute // 30) * 30, second=0, microsecond=0)
-                calendar = pd.date_range(start=aligned_start, end=end_date, freq='30T')
+                calendar = pd.date_range(start=aligned_start, end=end_date, freq='30min')
             elif freq == "1w":
                 aligned_start = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
                 days_since_monday = aligned_start.weekday()

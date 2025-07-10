@@ -230,7 +230,7 @@ def convert_for_qlib_internal(timeframe: str) -> str:
     
     # ONLY convert what's absolutely necessary for Qlib storage API compatibility
     if timeframe == "1h":
-        return "60min"  # Qlib storage API expects minutes for hour intervals
+        return "60min"  # Qlib storage API expects "60min" format for hour intervals
     
     # All other formats remain unchanged to maintain consistency
     return timeframe

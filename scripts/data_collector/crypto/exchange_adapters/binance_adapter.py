@@ -21,6 +21,13 @@ except ImportError:
     logger.error("ccxt library is required. Install with: pip install ccxt")
     raise
 
+import sys
+from pathlib import Path
+
+# Add the crypto directory to Python path
+crypto_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(crypto_dir))
+
 from exchange_adapters.base_adapter import ExchangeAdapter
 from config.timeframes import get_exchange_timeframe, get_timeframe_seconds
 from config.exchanges import get_exchange_config
@@ -75,7 +82,11 @@ class BinanceAdapter(ExchangeAdapter):
         try:
             # Check for proxy configuration
             proxy_config = {}
-            proxy_url = os.environ.get('CRYPTO_TEST_PROXY') or os.environ.get('HTTP_PROXY') or os.environ.get('http_proxy')
+            proxy_url = (os.environ.get('CRYPTO_TEST_PROXY') or 
+                        os.environ.get('https_proxy') or 
+                        os.environ.get('HTTPS_PROXY') or 
+                        os.environ.get('HTTP_PROXY') or 
+                        os.environ.get('http_proxy'))
             if proxy_url:
                 proxy_config['proxies'] = {
                     'http': proxy_url,
@@ -209,6 +220,16 @@ class BinanceAdapter(ExchangeAdapter):
             # Ensure numeric types
             numeric_columns = ['open', 'high', 'low', 'close', 'volume']
             df[numeric_columns] = df[numeric_columns].astype(float)
+            
+            # Apply end_time filtering if specified
+            if end_time:
+                if isinstance(end_time, str):
+                    end_time = pd.to_datetime(end_time)
+                elif isinstance(end_time, int):
+                    end_time = pd.to_datetime(end_time, unit='ms')
+                
+                # Filter data to only include records before end_time
+                df = df[df.index < end_time]
             
             logger.debug(f"Retrieved {len(df)} OHLCV records for {symbol} {timeframe}")
             return df

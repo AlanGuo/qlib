@@ -313,7 +313,7 @@ class TestEndToEndDataFlow:
                 'low': [99.0, 100.0],
                 'close': [101.0, 102.0],
                 'volume': [1000.0, 1100.0]
-            }, index=pd.date_range('2023-01-01', periods=2, freq='1H'))
+            }, index=pd.date_range('2023-01-01', periods=2, freq='1h'))
             
             # Store data for different exchanges and symbols
             test_cases = [
