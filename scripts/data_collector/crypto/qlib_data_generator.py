@@ -74,7 +74,7 @@ class QlibDataGenerator:
                              symbols: List[str],
                              start_date: datetime,
                              end_date: datetime,
-                             market_type: str = "spot") -> Dict[str, any]:
+                             market_types: List[str] = None) -> Dict[str, any]:
         """
         Create complete Qlib data directory structure.
         
@@ -90,12 +90,17 @@ class QlibDataGenerator:
             Start date for calendars
         end_date : datetime
             End date for calendars
+        market_types : List[str], optional
+            List of market types to include (spot, futures, perpetual, etc.)
+            If None, defaults to ["spot"]
             
         Returns
         -------
         dict
             Summary of created structure
         """
+        if market_types is None:
+            market_types = ["spot"]
         summary = {
             'timeframes_created': 0,
             'instruments_files': 0,
@@ -115,7 +120,7 @@ class QlibDataGenerator:
         for timeframe in valid_timeframes:
             try:
                 tf_summary = self._create_timeframe_structure(
-                    timeframe, exchanges, symbols, start_date, end_date, market_type
+                    timeframe, exchanges, symbols, start_date, end_date, market_types
                 )
                 
                 summary['timeframes_created'] += 1
@@ -137,8 +142,11 @@ class QlibDataGenerator:
                                    symbols: List[str],
                                    start_date: datetime,
                                    end_date: datetime,
-                                   market_type: str = "spot") -> Dict[str, int]:
+                                   market_types: List[str] = None) -> Dict[str, int]:
         """Create directory structure for a specific timeframe."""
+        if market_types is None:
+            market_types = ["spot"]
+            
         summary = {
             'instruments_files': 0,
             'calendar_files': 0,
@@ -158,9 +166,13 @@ class QlibDataGenerator:
         for subdir in [features_dir, instruments_dir, calendars_dir]:
             subdir.mkdir(exist_ok=True)
         
-        # Create instruments file
-        instruments = self._generate_instruments_list(exchanges, symbols, market_type)
-        self._create_instruments_file(instruments, "crypto", timeframe)
+        # Create instruments file with all market types
+        all_instruments = []
+        for market_type in market_types:
+            instruments = self._generate_instruments_list(exchanges, symbols, market_type)
+            all_instruments.extend(instruments)
+        
+        self._create_instruments_file(all_instruments, "crypto", timeframe)
         summary['instruments_files'] = 1
         
         # Create calendar files
@@ -168,7 +180,7 @@ class QlibDataGenerator:
         summary['calendar_files'] = 2  # Regular and future calendars
         
         # Create feature directories for each instrument
-        for instrument in instruments:
+        for instrument in all_instruments:
             instrument_dir = features_dir / instrument
             instrument_dir.mkdir(exist_ok=True)
             summary['feature_directories'] += 1

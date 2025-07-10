@@ -1382,7 +1382,7 @@ Examples:
                 symbols=symbols,
                 start_date=start_date,
                 end_date=end_date,
-                market_type="spot"  # Default to spot for structure creation
+                market_types=all_market_types  # Pass all market types
             )
             
             self.logger.info(f"Qlib structure generation completed: {structure_summary}")

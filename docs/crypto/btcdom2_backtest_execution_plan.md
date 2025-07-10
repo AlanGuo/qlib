@@ -61,7 +61,7 @@ mkdir -p crypto_data/{core,extended,futures}
 ### 1.2 智能币种筛选策略
 
 **筛选原则**：
-- ✅ **核心币种保证**：BTC/USDT, ETH/USDT, LTC/USDT, XRP/USDT, BCH/USDT, EOS/USDT, TRX/USDT, DOGE/USDT（2020年确定存在）
+- ✅ **核心币种保证**：BTC/USDT, ETH/USDT, LTC/USDT, XRP/USDT, BCH/USDT, TRX/USDT, DOGE/USDT（2020年确定存在）
 - ✅ **现货交易量过滤**：现货日交易量 > 500万USDT（适应2020年市场规模）
 - ✅ **候选池规模**：40-60个币种（为10个做空位置提供4-6倍选择空间）
 
@@ -104,7 +104,7 @@ python -m scripts.data_collector.crypto collect \
 ```
 
 **配置文件说明**：
-- 📁 **btcdom2_core.yaml**：8个核心币种（BTC/USDT, ETH/USDT, LTC/USDT, XRP/USDT, BCH/USDT, EOS/USDT, TRX/USDT, DOGE/USDT）
+- 📁 **btcdom2_core.yaml**：8个核心币种（BTC/USDT, ETH/USDT, LTC/USDT, XRP/USDT, BCH/USDT, TRX/USDT, DOGE/USDT）
 - 📁 **btcdom2.yaml**：动态筛选扩展币种（40-60个，基于交易量排序）
 
 **实现效果**：

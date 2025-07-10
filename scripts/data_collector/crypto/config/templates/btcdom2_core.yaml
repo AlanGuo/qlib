@@ -11,24 +11,25 @@ collection:
     - 1h
     - 1d
   
-  # 手动指定核心币种（不使用universe自动发现）
+  # 手动指定核心币种（对所有市场类型有效）
   symbols:
     - BTC/USDT
     - ETH/USDT
     - LTC/USDT
     - XRP/USDT
     - BCH/USDT
-    - EOS/USDT
     - TRX/USDT
     - DOGE/USDT
   
-  # 基础字段
+  # 基础字段（适用于所有市场类型）
   fields:
     - open
     - high
     - low
     - close
     - volume
+    - funding_rate
+    - open_interest
   
   # 收集设置
   max_workers: 4
@@ -45,6 +46,28 @@ collection:
   # 启用验证
   enable_validation: true
   incremental_update: false
+
+# Universe配置 - 支持多种市场类型
+universe:
+  name: "btcdom2_core"
+  description: "BTC dominance 2 core symbols with spot and perpetual markets (EOS/USDT removed - inactive)"
+  
+  exchanges:
+    - binance
+  primary_exchange: "binance"
+  
+  # 支持现货和永续合约
+  market_types:
+    - spot
+    - perpetual
+  
+  # 基础过滤器
+  filters:
+    quote_assets:
+      - USDT
+    market_types:
+      - spot
+      - perpetual
 
 logging:
   level: "INFO"
