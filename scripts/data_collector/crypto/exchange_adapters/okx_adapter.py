@@ -191,7 +191,30 @@ class OKXAdapter(ExchangeAdapter):
                   start_time: Optional[Union[datetime, str, int]] = None,
                   end_time: Optional[Union[datetime, str, int]] = None,
                   limit: Optional[int] = None) -> pd.DataFrame:
-        """Get OHLCV data from OKX."""
+        """Get OHLCV data from OKX with automatic pagination for large requests."""
+        
+        # Convert string dates to datetime objects
+        if isinstance(start_time, str):
+            start_time = pd.to_datetime(start_time)
+        if isinstance(end_time, str):
+            end_time = pd.to_datetime(end_time)
+        
+        # Check if this is a large request that needs pagination
+        if start_time and end_time and isinstance(start_time, datetime) and isinstance(end_time, datetime):
+            timeframe_seconds = get_timeframe_seconds(timeframe)
+            total_periods = int((end_time - start_time).total_seconds() / timeframe_seconds)
+            
+            # If the request is larger than our single request limit, use batching
+            if total_periods > self.config.max_candles_per_request:
+                logger.debug(f"Large request detected ({total_periods} periods), using pagination")
+                return self.get_historical_data_batch(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    start_time=start_time,
+                    end_time=end_time
+                )
+        
+        # For smaller requests, use the single request method
         self._rate_limit_wait()
         
         try:
@@ -206,8 +229,6 @@ class OKXAdapter(ExchangeAdapter):
             # Prepare parameters
             params = {}
             if start_time:
-                if isinstance(start_time, str):
-                    start_time = pd.to_datetime(start_time)
                 if isinstance(start_time, datetime):
                     start_time = int(start_time.timestamp() * 1000)
                 params['since'] = start_time
@@ -241,10 +262,10 @@ class OKXAdapter(ExchangeAdapter):
             
             # Apply end_time filtering if specified
             if end_time:
-                if isinstance(end_time, str):
-                    end_time = pd.to_datetime(end_time)
-                elif isinstance(end_time, int):
+                if isinstance(end_time, int):
                     end_time = pd.to_datetime(end_time, unit='ms')
+                elif isinstance(end_time, datetime):
+                    pass  # Already datetime
                 
                 # Filter data to only include records before end_time
                 df = df[df.index < end_time]

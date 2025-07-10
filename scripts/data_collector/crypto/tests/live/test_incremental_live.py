@@ -53,38 +53,40 @@ PROXY_CONFIG = {
 class TestIncrementalLive:
     """Live testing of incremental update functionality."""
     
-    def setup_method(self):
-        """Set up test environment with proxy configuration."""
+    @classmethod
+    def setup_class(cls):
+        """Set up test environment with proxy configuration (shared across all tests)."""
         # Configure proxy settings
         for key, value in PROXY_CONFIG.items():
             os.environ[key] = value
         
-        # Create test directories
-        self.test_dir = tempfile.mkdtemp()
-        self.test_data_dir = os.path.join(self.test_dir, "data")
-        self.test_state_dir = os.path.join(self.test_dir, "state")
+        # Create test directories (shared across all tests)
+        cls.test_dir = tempfile.mkdtemp()
+        cls.test_data_dir = os.path.join(cls.test_dir, "data")
+        cls.test_state_dir = os.path.join(cls.test_dir, "state")
         
-        os.makedirs(self.test_data_dir, exist_ok=True)
-        os.makedirs(self.test_state_dir, exist_ok=True)
+        os.makedirs(cls.test_data_dir, exist_ok=True)
+        os.makedirs(cls.test_state_dir, exist_ok=True)
         
         # Initialize test configuration
-        self.config = CryptoDataConfig()
-        self.config.data_dir = self.test_data_dir
-        self.config.state_dir = self.test_state_dir
+        cls.config = CryptoDataConfig()
+        cls.config.data_dir = cls.test_data_dir
+        cls.config.state_dir = cls.test_state_dir
         
         # Test parameters
-        self.test_exchange = 'binance'
-        self.test_symbol = 'BTCUSDT'
-        self.test_timeframe = '1h'
-        self.test_limit = 100  # Small limit for testing
+        cls.test_exchange = 'binance'
+        cls.test_symbol = 'BTCUSDT'
+        cls.test_timeframe = '1h'
+        cls.test_limit = 100  # Small limit for testing
         
-        print(f"Test environment initialized: {self.test_dir}")
+        print(f"Test environment initialized: {cls.test_dir}")
         print(f"Proxy configured: {PROXY_CONFIG['https_proxy']}")
     
-    def teardown_method(self):
+    @classmethod
+    def teardown_class(cls):
         """Clean up test environment."""
-        if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
+        if hasattr(cls, 'test_dir') and os.path.exists(cls.test_dir):
+            shutil.rmtree(cls.test_dir)
         print("Test environment cleaned up")
     
     def test_network_connectivity(self):

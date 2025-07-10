@@ -10,11 +10,10 @@ complex delisting detection or lifecycle management.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional, Any, Union, Set
 import pandas as pd
 import time
-import math
 
 try:
     import ccxt
@@ -72,7 +71,10 @@ class SimpleErrorLogCollector:
             'successful_collections': 0,
             'failed_collections': 0,
             'bad_symbol_errors': 0,
-            'other_errors': 0
+            'other_errors': 0,
+            'pagination_used': 0,
+            'direct_method_used': 0,
+            'pagination_fallback': 0
         }
     
     def _get_symbol_cache_key(self, adapter: ExchangeAdapter, symbol: str) -> str:
@@ -230,110 +232,16 @@ class SimpleErrorLogCollector:
                                timeframe: str,
                                start_time: datetime,
                                end_time: datetime) -> pd.DataFrame:
-        """Collect data with pagination support and retry logic."""
-        # Check if we need pagination based on time range
-        total_data = self._collect_data_with_pagination(adapter, symbol, timeframe, start_time, end_time)
-        return total_data
-    
-    def _collect_data_with_pagination(self,
-                                    adapter: ExchangeAdapter,
-                                    symbol: str,
-                                    timeframe: str,
-                                    start_time: datetime,
-                                    end_time: datetime) -> pd.DataFrame:
-        """Collect data with automatic pagination for large time ranges."""
-        # Calculate timeframe duration in hours
-        timeframe_hours = self._get_timeframe_hours(timeframe)
-        
-        # Calculate total time range in hours
-        total_hours = (end_time - start_time).total_seconds() / 3600
-        
-        # Estimate number of data points needed
-        estimated_points = int(total_hours / timeframe_hours)
-        
-        # API limit per request (conservative estimate)
-        max_points_per_request = 1000
-        
-        if estimated_points <= max_points_per_request:
-            # Single request is sufficient
-            logger.debug(f"Single request sufficient for {symbol} ({estimated_points} points)")
-            return self._collect_single_batch_with_retry(adapter, symbol, timeframe, start_time, end_time)
-        else:
-            # Need pagination
-            num_batches = math.ceil(estimated_points / max_points_per_request)
-            logger.info(f"Pagination required for {symbol}: {estimated_points} points, {num_batches} batches")
-            
-            all_data = []
-            current_start = start_time
-            
-            for batch_num in range(num_batches):
-                # Calculate end time for this batch
-                batch_duration = timedelta(hours=timeframe_hours * max_points_per_request)
-                current_end = min(current_start + batch_duration, end_time)
-                
-                logger.debug(f"Fetching batch {batch_num + 1}/{num_batches} for {symbol}: {current_start} to {current_end}")
-                
-                # Collect data for this batch
-                batch_data = self._collect_single_batch_with_retry(
-                    adapter, symbol, timeframe, current_start, current_end
-                )
-                
-                if not batch_data.empty:
-                    all_data.append(batch_data)
-                    
-                    # Update start time for next batch (avoid overlap)
-                    if not batch_data.empty:
-                        last_timestamp = batch_data.index[-1]
-                        current_start = last_timestamp + timedelta(hours=timeframe_hours)
-                    else:
-                        current_start = current_end
-                else:
-                    # If no data in this batch, move to next time range
-                    current_start = current_end
-                
-                # Break if we've reached the end time
-                if current_start >= end_time:
-                    break
-                
-                # Small delay between requests to be respectful to API
-                time.sleep(0.1)
-            
-            # Combine all data
-            if all_data:
-                combined_data = pd.concat(all_data, axis=0)
-                # Remove duplicates and sort by timestamp
-                combined_data = combined_data[~combined_data.index.duplicated(keep='first')]
-                combined_data = combined_data.sort_index()
-                logger.info(f"Combined {len(all_data)} batches into {len(combined_data)} records for {symbol}")
-                return combined_data
-            else:
-                logger.warning(f"No data collected across all batches for {symbol}")
-                return pd.DataFrame()
-    
-    def _get_timeframe_hours(self, timeframe: str) -> float:
-        """Convert timeframe string to hours."""
-        timeframe_map = {
-            '1m': 1/60, '5m': 5/60, '15m': 15/60, '30m': 30/60,
-            '1h': 1, '2h': 2, '4h': 4, '6h': 6, '8h': 8, '12h': 12,
-            '1d': 24, '3d': 72, '1w': 168, '1M': 720  # Approximate for month
-        }
-        return timeframe_map.get(timeframe, 1)  # Default to 1 hour if unknown
-    
-    def _collect_single_batch_with_retry(self,
-                                       adapter: ExchangeAdapter,
-                                       symbol: str,
-                                       timeframe: str,
-                                       start_time: datetime,
-                                       end_time: datetime) -> pd.DataFrame:
-        """Collect data with retry logic and smart error handling."""
+        """Collect data with retry logic and smart error handling with pagination support."""
         last_exception = None
         
         for attempt in range(self.max_retries + 1):
             try:
                 logger.debug(f"Collecting data for {symbol} (attempt {attempt + 1}/{self.max_retries + 1})")
                 
-                # Attempt to get data from adapter
-                data = adapter.get_ohlcv(
+                # Determine if pagination is needed based on time range
+                data = self._get_data_with_pagination_logic(
+                    adapter=adapter,
                     symbol=symbol,
                     timeframe=timeframe,
                     start_time=start_time,
@@ -412,6 +320,79 @@ class SimpleErrorLogCollector:
         else:
             raise Exception(f"Failed to collect data for {symbol} after {self.max_retries + 1} attempts")
     
+    def _get_data_with_pagination_logic(self,
+                                      adapter: ExchangeAdapter,
+                                      symbol: str,
+                                      timeframe: str,
+                                      start_time: datetime,
+                                      end_time: datetime) -> pd.DataFrame:
+        """
+        Determine whether to use pagination based on data size estimation.
+        
+        This method estimates the number of records needed and automatically
+        chooses between direct get_ohlcv() and get_historical_data_batch() methods.
+        """
+        # Import here to avoid circular imports
+        from config.timeframes import get_timeframe_seconds
+        
+        try:
+            # Calculate estimated number of records
+            timeframe_seconds = get_timeframe_seconds(timeframe)
+            time_range_seconds = (end_time - start_time).total_seconds()
+            estimated_records = int(time_range_seconds / timeframe_seconds)
+            
+            # Get exchange limits - use conservative estimate if not available
+            exchange_limit = getattr(adapter, 'config', None)
+            if exchange_limit and hasattr(exchange_limit, 'max_candles_per_request'):
+                max_records = exchange_limit.max_candles_per_request
+            else:
+                # Conservative fallback for unknown exchanges
+                max_records = 500
+            
+            logger.debug(f"Estimated records: {estimated_records}, Exchange limit: {max_records}")
+            
+            # Use pagination if estimated records exceed 80% of exchange limit
+            if estimated_records > max_records * 0.8:
+                logger.info(f"Using pagination for {symbol}: estimated {estimated_records} records > {max_records * 0.8}")
+                
+                # Check if adapter has get_historical_data_batch method
+                if hasattr(adapter, 'get_historical_data_batch'):
+                    self.stats['pagination_used'] += 1
+                    return adapter.get_historical_data_batch(
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        start_time=start_time,
+                        end_time=end_time
+                    )
+                else:
+                    logger.warning(f"Adapter {adapter.exchange_id} does not support pagination, using direct method")
+                    self.stats['pagination_fallback'] += 1
+                    return adapter.get_ohlcv(
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        start_time=start_time,
+                        end_time=end_time
+                    )
+            else:
+                logger.debug(f"Using direct method for {symbol}: estimated {estimated_records} records <= {max_records * 0.8}")
+                self.stats['direct_method_used'] += 1
+                return adapter.get_ohlcv(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    start_time=start_time,
+                    end_time=end_time
+                )
+                
+        except Exception as e:
+            logger.warning(f"Error in pagination logic for {symbol}: {e}, falling back to direct method")
+            self.stats['pagination_fallback'] += 1
+            return adapter.get_ohlcv(
+                symbol=symbol,
+                timeframe=timeframe,
+                start_time=start_time,
+                end_time=end_time
+            )
+    
     def collect_multiple_symbols(self,
                                adapter: ExchangeAdapter,
                                symbols: List[str],
@@ -479,11 +460,20 @@ class SimpleErrorLogCollector:
             'successful_symbols': [s for s, r in results.items() if r['status'] == 'success'],
             'failed_symbols': [s for s, r in results.items() if r['status'] in ['failed', 'error']],
             'attempts_in_batch': self.stats['total_attempts'] - batch_start_stats['total_attempts'],
-            'success_rate': len([r for r in results.values() if r['status'] == 'success']) / len(symbols) * 100
+            'success_rate': len([r for r in results.values() if r['status'] == 'success']) / len(symbols) * 100,
+            'pagination_stats': {
+                'pagination_used': self.stats['pagination_used'] - batch_start_stats.get('pagination_used', 0),
+                'direct_method_used': self.stats['direct_method_used'] - batch_start_stats.get('direct_method_used', 0),
+                'pagination_fallback': self.stats['pagination_fallback'] - batch_start_stats.get('pagination_fallback', 0)
+            }
         }
+        
+        pagination_batch_stats = batch_stats['pagination_stats']
+        pagination_total = pagination_batch_stats['pagination_used'] + pagination_batch_stats['direct_method_used']
         
         logger.info(f"Batch collection completed: {len(batch_stats['successful_symbols'])} successful, "
                    f"{len(batch_stats['failed_symbols'])} failed")
+        logger.info(f"Pagination usage: {pagination_batch_stats['pagination_used']}/{pagination_total} requests used pagination")
         
         return {
             'results': results,
@@ -502,7 +492,30 @@ class SimpleErrorLogCollector:
             'successful_collections': 0,
             'failed_collections': 0,
             'bad_symbol_errors': 0,
-            'other_errors': 0
+            'other_errors': 0,
+            'pagination_used': 0,
+            'direct_method_used': 0,
+            'pagination_fallback': 0
+        }
+    
+    def get_pagination_stats(self) -> Dict[str, Any]:
+        """
+        Get pagination-specific statistics.
+        
+        Returns
+        -------
+        Dict[str, Any]
+            Statistics about pagination usage
+        """
+        total_data_requests = self.stats['pagination_used'] + self.stats['direct_method_used'] + self.stats['pagination_fallback']
+        
+        return {
+            'total_data_requests': total_data_requests,
+            'pagination_used': self.stats['pagination_used'],
+            'direct_method_used': self.stats['direct_method_used'],
+            'pagination_fallback': self.stats['pagination_fallback'],
+            'pagination_rate': (self.stats['pagination_used'] / total_data_requests * 100) if total_data_requests > 0 else 0,
+            'fallback_rate': (self.stats['pagination_fallback'] / total_data_requests * 100) if total_data_requests > 0 else 0
         }
     
     def get_smart_logging_stats(self) -> Dict[str, Any]:
